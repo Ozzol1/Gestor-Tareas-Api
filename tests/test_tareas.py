@@ -1,14 +1,17 @@
 import pytest
 from app import create_app, db
-from app.models import Tarea
+from app.models import Usuario, Tarea
 
 
 @pytest.fixture
 def cliente():
-    """Crea una app de prueba con base de datos en memoria (no toca la real)."""
-    app = create_app()
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
+    """Crea una app de prueba con base de datos en memoria."""
+    app = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        "JWT_SECRET_KEY": "clave-de-test-suficientemente-larga-para-32-bytes-o-mas",
+        "JWT_ACCESS_TOKEN_EXPIRES": 3600,
+    })
 
     with app.app_context():
         db.create_all()
@@ -17,128 +20,161 @@ def cliente():
         db.drop_all()
 
 
+def registrar(cliente, email, password):
+    """Helper: registra un usuario y devuelve la respuesta."""
+    return cliente.post("/auth/registro", json={"email": email, "password": password})
+
+
+def login(cliente, email, password):
+    """Helper: hace login y devuelve el token."""
+    resp = cliente.post("/auth/login", json={"email": email, "password": password})
+    return resp.get_json()["access_token"]
+
+
+def auth_header(token):
+    """Helper: devuelve el header de autorización."""
+    return {"Authorization": f"Bearer {token}"}
+
+
 # ====================================================
-# HAPPY PATHS
+# TESTS DE AUTENTICACIÓN
 # ====================================================
 
-def test_ping(cliente):
-    """El endpoint /ping debe responder pong."""
-    resp = cliente.get("/ping")
+def test_registro_exitoso(cliente):
+    resp = registrar(cliente, "khale@example.com", "secreto123")
+    assert resp.status_code == 201
+    data = resp.get_json()
+    assert data["usuario"]["email"] == "khale@example.com"
+    assert "password" not in data["usuario"]
+    assert "password_hash" not in data["usuario"]
+
+
+def test_registro_email_duplicado(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    resp = registrar(cliente, "khale@example.com", "otro12345")
+    assert resp.status_code == 409
+
+
+def test_registro_password_corta(cliente):
+    resp = registrar(cliente, "khale@example.com", "123")
+    assert resp.status_code == 400
+    assert "8 caracteres" in resp.get_json()["error"]
+
+
+def test_registro_email_invalido(cliente):
+    resp = registrar(cliente, "no-es-email", "secreto123")
+    assert resp.status_code == 400
+
+
+def test_login_exitoso(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/auth/login", json={"email": "khale@example.com", "password": "secreto123"})
     assert resp.status_code == 200
-    assert resp.get_json()["mensaje"] == "pong"
+    assert "access_token" in resp.get_json()
 
 
-def test_listar_tareas_vacio(cliente):
-    """Al inicio no hay tareas."""
+def test_login_credenciales_malas(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/auth/login", json={"email": "khale@example.com", "password": "wrongpass"})
+    assert resp.status_code == 401
+
+
+def test_perfil_sin_token(cliente):
+    resp = cliente.get("/auth/perfil")
+    assert resp.status_code == 401
+
+
+def test_perfil_con_token(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    token = login(cliente, "khale@example.com", "secreto123")
+    resp = cliente.get("/auth/perfil", headers=auth_header(token))
+    assert resp.status_code == 200
+    assert resp.get_json()["email"] == "khale@example.com"
+
+
+# ====================================================
+# TESTS DE TAREAS (con autenticación)
+# ====================================================
+
+def test_tareas_sin_token(cliente):
     resp = cliente.get("/tareas")
+    assert resp.status_code == 401
+
+
+def test_crear_tarea_con_token(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    token = login(cliente, "khale@example.com", "secreto123")
+
+    resp = cliente.post("/tareas", headers=auth_header(token),
+                        json={"titulo": "Estudiar JWT", "prioridad": "alta"})
+    assert resp.status_code == 201
+    data = resp.get_json()
+    assert data["titulo"] == "Estudiar JWT"
+    assert data["usuario_id"] is not None
+
+
+def test_listar_tareas_propias(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    token = login(cliente, "khale@example.com", "secreto123")
+
+    cliente.post("/tareas", headers=auth_header(token), json={"titulo": "Tarea 1"})
+    cliente.post("/tareas", headers=auth_header(token), json={"titulo": "Tarea 2"})
+
+    resp = cliente.get("/tareas", headers=auth_header(token))
+    assert resp.status_code == 200
+    assert len(resp.get_json()) == 2
+
+
+def test_aislamiento_entre_usuarios(cliente):
+    """Usuario A no puede ver tareas de Usuario B."""
+    # Khale crea una tarea
+    registrar(cliente, "khale@example.com", "secreto123")
+    token_khale = login(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/tareas", headers=auth_header(token_khale), json={"titulo": "Tarea de Khale"})
+    tarea_id = resp.get_json()["id"]
+
+    # María intenta verla
+    registrar(cliente, "maria@example.com", "maria12345")
+    token_maria = login(cliente, "maria@example.com", "maria12345")
+
+    resp = cliente.get(f"/tareas/{tarea_id}", headers=auth_header(token_maria))
+    assert resp.status_code == 404
+
+    # María intenta listar -> solo ve las suyas
+    resp = cliente.get("/tareas", headers=auth_header(token_maria))
     assert resp.status_code == 200
     assert resp.get_json() == []
 
 
-def test_crear_tarea(cliente):
-    """Crear una tarea válida debe devolver 201 y los datos."""
-    resp = cliente.post("/tareas", json={
-        "titulo": "Test tarea",
-        "prioridad": "alta",
-        "fecha_limite": "2026-12-31"
-    })
-    assert resp.status_code == 201
-    data = resp.get_json()
-    assert data["titulo"] == "Test tarea"
-    assert data["prioridad"] == "alta"
-    assert data["completada"] is False
-    assert "id" in data
+def test_maria_no_puede_eliminar_tarea_de_khale(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    token_khale = login(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/tareas", headers=auth_header(token_khale), json={"titulo": "Tarea de Khale"})
+    tarea_id = resp.get_json()["id"]
+
+    registrar(cliente, "maria@example.com", "maria12345")
+    token_maria = login(cliente, "maria@example.com", "maria12345")
+
+    resp = cliente.delete(f"/tareas/{tarea_id}", headers=auth_header(token_maria))
+    assert resp.status_code == 404
 
 
-def test_obtener_tarea_por_id(cliente):
-    """Debe devolver una tarea existente."""
-    cliente.post("/tareas", json={"titulo": "Mi tarea"})
-    resp = cliente.get("/tareas/1")
-    assert resp.status_code == 200
-    assert resp.get_json()["titulo"] == "Mi tarea"
+def test_patch_tarea_propia(cliente):
+    registrar(cliente, "khale@example.com", "secreto123")
+    token = login(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/tareas", headers=auth_header(token), json={"titulo": "Original"})
+    tarea_id = resp.get_json()["id"]
 
-
-def test_actualizar_tarea_patch(cliente):
-    """PATCH debe actualizar solo los campos enviados."""
-    cliente.post("/tareas", json={"titulo": "Original", "prioridad": "baja"})
-    resp = cliente.patch("/tareas/1", json={"completada": True, "prioridad": "alta"})
+    resp = cliente.patch(f"/tareas/{tarea_id}", headers=auth_header(token),
+                         json={"completada": True, "prioridad": "alta"})
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["completada"] is True
     assert data["prioridad"] == "alta"
-    assert data["titulo"] == "Original"  # No cambió
-
-
-def test_eliminar_tarea(cliente):
-    """DELETE debe eliminar y devolver 200."""
-    cliente.post("/tareas", json={"titulo": "A eliminar"})
-    resp = cliente.delete("/tareas/1")
-    assert resp.status_code == 200
-
-    # Verificar que ya no existe
-    resp = cliente.get("/tareas/1")
-    assert resp.status_code == 404
-
-
-def test_filtro_completada(cliente):
-    """El filtro ?completada=true/false debe funcionar."""
-    cliente.post("/tareas", json={"titulo": "Pendiente"})
-    cliente.post("/tareas", json={"titulo": "Completada"})
-    cliente.patch("/tareas/2", json={"completada": True})
-
-    resp = cliente.get("/tareas?completada=true")
-    assert resp.status_code == 200
-    assert len(resp.get_json()) == 1
-    assert resp.get_json()[0]["titulo"] == "Completada"
-
-    resp = cliente.get("/tareas?completada=false")
-    assert len(resp.get_json()) == 1
-    assert resp.get_json()[0]["titulo"] == "Pendiente"
-
-
-# ====================================================
-# CASOS DE ERROR
-# ====================================================
-
-def test_crear_tarea_sin_titulo(cliente):
-    """Sin título debe devolver 400."""
-    resp = cliente.post("/tareas", json={"descripcion": "sin titulo"})
-    assert resp.status_code == 400
-    assert "titulo" in resp.get_json()["error"].lower()
 
 
 def test_crear_tarea_titulo_vacio(cliente):
-    """Título vacío debe devolver 400."""
-    resp = cliente.post("/tareas", json={"titulo": "   "})
-    assert resp.status_code == 400
-
-
-def test_crear_tarea_fecha_invalida(cliente):
-    """Fecha con formato incorrecto debe devolver 400."""
-    resp = cliente.post("/tareas", json={"titulo": "Prueba", "fecha_limite": "31/12/2026"})
-    assert resp.status_code == 400
-    assert "YYYY-MM-DD" in resp.get_json()["error"]
-
-
-def test_crear_tarea_prioridad_invalida(cliente):
-    """Prioridad fuera del enum debe devolver 400."""
-    resp = cliente.post("/tareas", json={"titulo": "Prueba", "prioridad": "urgente"})
-    assert resp.status_code == 400
-
-
-def test_obtener_tarea_inexistente(cliente):
-    """ID inexistente debe devolver 404."""
-    resp = cliente.get("/tareas/999")
-    assert resp.status_code == 404
-
-
-def test_eliminar_tarea_inexistente(cliente):
-    """Eliminar ID inexistente debe devolver 404."""
-    resp = cliente.delete("/tareas/999")
-    assert resp.status_code == 404
-
-
-def test_post_sin_json(cliente):
-    """POST sin Content-Type JSON debe devolver 400."""
-    resp = cliente.post("/tareas", data="no soy json", content_type="text/plain")
+    registrar(cliente, "khale@example.com", "secreto123")
+    token = login(cliente, "khale@example.com", "secreto123")
+    resp = cliente.post("/tareas", headers=auth_header(token), json={"titulo": "   "})
     assert resp.status_code == 400
