@@ -55,7 +55,7 @@ La API corre en `http://127.0.0.1:5000`.
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/tareas` | Listar tareas propias. Filtro: `?completada=true/false` |
-| GET | `/tareas/<id>` | Obtener una tarea propia |
+| GET | `/tareas/<id>` | Obtener una tarea propia
 | POST | `/tareas` | Crear tarea |
 | PATCH | `/tareas/<id>` | Actualizar tarea propia |
 | DELETE | `/tareas/<id>` | Eliminar tarea propia |

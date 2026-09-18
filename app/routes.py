@@ -17,7 +17,6 @@ def listar_tareas():
 
     query = Tarea.query.filter_by(usuario_id=usuario_id)
 
-    # Filtro opcional: ?completada=true/false
     completada_param = request.args.get("completada")
     if completada_param is not None:
         if completada_param.lower() == "true":
