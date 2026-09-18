@@ -10,34 +10,38 @@ Si no se pasa ruta, busca 'tareas.json' en la carpeta actual.
 import json
 import os
 import sys
-from datetime import datetime
-
 from app import create_app, db
 from app.models import Tarea
 
 
 def migrar(ruta_json):
+    # 1. Manejo de FileNotFoundError
     if not os.path.exists(ruta_json):
-        print(f"❌ No se encontró el archivo: {ruta_json}")
-        print("   No hay nada que migrar. La base de datos queda como está.")
-        return
+        print(f"❌ ERROR: No se encontró el archivo '{ruta_json}'.")
+        print("   Verifica la ruta e intenta de nuevo.")
+        sys.exit(1)
 
-    print(f"📂 Leyendo {ruta_json}...")
+    # 2. Manejo de JSONDecodeError
     try:
         with open(ruta_json, "r", encoding="utf-8") as f:
             datos = json.load(f)
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"❌ El archivo JSON está corrupto: {e}")
-        return
+    except json.JSONDecodeError as e:
+        print(f"❌ ERROR: El archivo JSON está corrupto o mal formado.")
+        print(f"   Detalle: {e}")
+        sys.exit(1)
+    except UnicodeDecodeError:
+        print("❌ ERROR: El archivo no está en UTF-8.")
+        sys.exit(1)
 
-    # Soportar formato nuevo (dict con "tareas") y antiguo (lista directa)
+    # 3. Soportar formato dict {"tareas": [...]} y lista directa [...]
     if isinstance(datos, dict):
         lista_tareas = datos.get("tareas", [])
     elif isinstance(datos, list):
         lista_tareas = datos
     else:
-        print("❌ Formato de JSON no reconocido.")
-        return
+        print("❌ ERROR: Formato de JSON no reconocido.")
+        print("   Se esperaba una lista o un dict con la clave 'tareas'.")
+        sys.exit(1)
 
     if not lista_tareas:
         print("📭 El archivo no contiene tareas. Nada que migrar.")
@@ -45,6 +49,7 @@ def migrar(ruta_json):
 
     print(f"📋 Se encontraron {len(lista_tareas)} tarea(s) para migrar.")
 
+    # 4. Insertar en SQLite
     app = create_app()
     with app.app_context():
         migradas = 0
@@ -53,7 +58,7 @@ def migrar(ruta_json):
             titulo = (t.get("titulo") or "").strip()
             if not titulo:
                 omitidas += 1
-                continue  # Saltamos las que no tienen título válido
+                continue
 
             nueva = Tarea(
                 titulo=titulo,
@@ -67,10 +72,13 @@ def migrar(ruta_json):
 
         db.session.commit()
 
-    print(f"✅ Migración completada:")
-    print(f"   - {migradas} tarea(s) insertada(s).")
+    # 5. Resumen final
+    print("=" * 40)
+    print(f"✅ Migración completada")
+    print(f"   - {migradas} tarea(s) insertada(s)")
     if omitidas:
-        print(f"   - {omitidas} tarea(s) omitida(s) (sin título válido).")
+        print(f"   - {omitidas} tarea(s) omitida(s) (sin título válido)")
+    print("=" * 40)
 
 
 if __name__ == "__main__":
