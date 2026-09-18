@@ -54,3 +54,39 @@ def validar_id(id_str):
         return id_int
     except (ValueError, TypeError):
         return None
+
+from app.utils import email_valido, password_valida
+
+
+def validar_registro(data):
+    """Valida el payload de registro (email + password)."""
+    if not isinstance(data, dict):
+        return False, "El cuerpo debe ser un objeto JSON válido."
+
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email:
+        return False, "El campo 'email' es obligatorio."
+    if not email_valido(email):
+        return False, "El formato del email no es válido."
+
+    if not password:
+        return False, "El campo 'password' es obligatorio."
+    if not password_valida(password):
+        return False, "La contraseña debe tener al menos 8 caracteres."
+
+    return True, None
+
+
+def validar_login(data):
+    """Valida el payload de login (email + password)."""
+    if not isinstance(data, dict):
+        return False, "El cuerpo debe ser un objeto JSON válido."
+
+    if not data.get("email"):
+        return False, "El campo 'email' es obligatorio."
+    if not data.get("password"):
+        return False, "El campo 'password' es obligatorio."
+
+    return True, None
