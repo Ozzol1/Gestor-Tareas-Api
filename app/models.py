@@ -53,7 +53,7 @@ class Tarea(db.Model):
         nullable=False
     )
 
-    # NUEVO: relación con Usuario (por ahora nullable=True para la migración)
+    # Cada tarea pertenece obligatoriamente a un usuario
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
 
     def to_dict(self):

@@ -120,6 +120,14 @@ py migrar_usuarios.py 2         # Al usuario con ID 2
 py migrar_usuarios.py --eliminar # O bórralas
 ```
 
+## 🧱 Modelo de datos
+
+- **Usuario**: cada usuario tiene email único y contraseña hasheada con werkzeug.
+- **Tarea**: cada tarea **pertenece obligatoriamente a un usuario** (`usuario_id` es `NOT NULL`). No existen tareas huérfanas en el modelo final.
+
+Si migras datos desde un sistema anterior (como `tareas.json`), usa `migrar_json.py` y asegúrate de que las tareas se asignen a un usuario existente. El script de migración `migrar_usuarios.py` **fue eliminado** en la versión final, porque el esquema ahora impide tareas sin dueño.
+
+
 ## 📁 Estructura
 
 ```
