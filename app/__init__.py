@@ -1,17 +1,37 @@
+import os
 import logging
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 db = SQLAlchemy()
+jwt = JWTManager()
 
 
-def create_app():
+def create_app(config_override=None):
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tareas.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
 
+    # Aplicar configuración extra (para tests)
+    if config_override:
+        app.config.update(config_override)
+
+    # ... el resto igual
+
+    # ----------------------------------------------------
+    # CONFIGURACIÓN DE JWT
+    # ----------------------------------------------------
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "clave-de-desarrollo-insegura")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))
+
     db.init_app(app)
+    jwt.init_app(app)
 
     # ----------------------------------------------------
     # LOGGING Y MANEJO GLOBAL DE ERRORES
@@ -44,8 +64,14 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    # ----------------------------------------------------
+    # BLUEPRINTS
+    # ----------------------------------------------------
     from app.routes import bp as tareas_bp
     app.register_blueprint(tareas_bp)
+
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp)
 
     @app.route("/ping")
     def ping():
