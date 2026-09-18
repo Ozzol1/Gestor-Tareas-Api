@@ -69,7 +69,7 @@ def crear_tarea():
         prioridad=data.get("prioridad", "media"),
         fecha_limite=data.get("fecha_limite"),
         completada=data.get("completada", False),
-        usuario_id=usuario_id,  # ← Asignación automática
+        usuario_id=usuario_id,
     )
     db.session.add(nueva)
     db.session.commit()
