@@ -14,7 +14,6 @@ jwt = JWTManager()
 def create_app(config_override=None):
     app = Flask(__name__)
 
-    # Leer DATABASE_URL del entorno (para producción) con fallback a SQLite local
     database_url = os.getenv("DATABASE_URL", "sqlite:///tareas.db")
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -32,11 +31,11 @@ def create_app(config_override=None):
     db.init_app(app)
     jwt.init_app(app)
 
+    # Logging a consola (sin FileHandler para Docker)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler("app.log"),
             logging.StreamHandler()
         ]
     )
