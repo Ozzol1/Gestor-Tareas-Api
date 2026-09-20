@@ -5,7 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env
 load_dotenv()
 
 db = SQLAlchemy()
@@ -14,28 +13,25 @@ jwt = JWTManager()
 
 def create_app(config_override=None):
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tareas.db"
+
+    # Leer DATABASE_URL del entorno (para producción) con fallback a SQLite local
+    database_url = os.getenv("DATABASE_URL", "sqlite:///tareas.db")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
 
-    # Aplicar configuración extra (para tests)
-    if config_override:
-        app.config.update(config_override)
-
-    # ... el resto igual
-
-    # ----------------------------------------------------
-    # CONFIGURACIÓN DE JWT
-    # ----------------------------------------------------
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "clave-de-desarrollo-insegura")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))
+
+    if config_override:
+        app.config.update(config_override)
 
     db.init_app(app)
     jwt.init_app(app)
 
-    # ----------------------------------------------------
-    # LOGGING Y MANEJO GLOBAL DE ERRORES
-    # ----------------------------------------------------
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -57,16 +53,10 @@ def create_app(config_override=None):
     def ruta_no_encontrada(error):
         return jsonify({"error": "Ruta no encontrada."}), 404
 
-    # ----------------------------------------------------
-    # MODELOS Y RUTAS
-    # ----------------------------------------------------
     from app import models
     with app.app_context():
         db.create_all()
 
-    # ----------------------------------------------------
-    # BLUEPRINTS
-    # ----------------------------------------------------
     from app.routes import bp as tareas_bp
     app.register_blueprint(tareas_bp)
 
@@ -76,5 +66,9 @@ def create_app(config_override=None):
     @app.route("/ping")
     def ping():
         return {"mensaje": "pong", "status": "ok"}
+
+    @app.route("/health")
+    def health():
+        return {"status": "ok"}, 200
 
     return app
