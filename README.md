@@ -1,7 +1,10 @@
 # 🚀 Gestor de Tareas - API REST con JWT
 
-API REST para el gestor de tareas con autenticación JWT, integrada con el CRM interno de NovaTech. Desplegada en producción con Docker y Render.
+[![Tests](https://github.com/Ozzol1/Gestor-Tareas-Api/actions/workflows/tests.yml/badge.svg)](https://github.com/Ozzol1/Gestor-Tareas-Api/actions/workflows/tests.yml)
+[![Deploy](https://img.shields.io/badge/deploy-render-blue)](https://gestor-tareas-api-7efn.onrender.com/health)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
 
+API REST con autenticación JWT + frontend vanilla. Producto interno de NovaTech.
 ## 📋 Stack
 
 - Python 3.10+
