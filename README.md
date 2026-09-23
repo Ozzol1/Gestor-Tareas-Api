@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](#)
 
 API REST con autenticación JWT + frontend vanilla. Producto interno de NovaTech.
+
 ## 📋 Stack
 
 - Python 3.10+
@@ -13,13 +14,16 @@ API REST con autenticación JWT + frontend vanilla. Producto interno de NovaTech
 - SQLAlchemy + SQLite (local) / PostgreSQL (producción)
 - Gunicorn
 - Docker + Docker Compose
-- pytest
+- pytest + GitHub Actions
+- HTML + CSS + JavaScript (vanilla)
 
 ## 🌐 URL Pública (Producción)
 
 **API desplegada en Render:** `https://gestor-tareas-api-7efn.onrender.com`
 
 > ⚠️ **Nota:** El servicio gratuito de Render duerme tras 15 minutos de inactividad. La primera petición tarda 30-50 segundos en responder.
+
+**Frontend incluido:** La misma URL sirve el frontend (`/login`, `/registro`, `/dashboard`) y la API.
 
 ### Ejemplos con la URL pública
 
@@ -38,6 +42,16 @@ API REST con autenticación JWT + frontend vanilla. Producto interno de NovaTech
     curl -X POST https://gestor-tareas-api-7efn.onrender.com/auth/login \
       -H "Content-Type: application/json" \
       -d "{\"email\":\"khale@example.com\",\"password\":\"secreto123\"}"
+
+## 📸 Screenshots
+
+| Login | Registro |
+|-------|----------|
+| ![Login](docs/screenshots/login.png) | ![Registro](docs/screenshots/registro.png) |
+
+| Dashboard | Editar tarea |
+|-----------|--------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Editar](docs/screenshots/editar.png) |
 
 ## 📦 Instalación local
 
@@ -101,7 +115,7 @@ La API corre en `http://localhost:5000`.
 |--------|------|-------------|
 | GET | `/tareas` | Listar tareas propias. Filtro: `?completada=true/false` |
 | GET | `/tareas/<id>` | Obtener una tarea propia |
-| POST | `/tareas/` | Crear tarea |
+| POST | `/tareas` | Crear tarea |
 | PATCH | `/tareas/<id>` | Actualizar tarea propia |
 | DELETE | `/tareas/<id>` | Eliminar tarea propia |
 
@@ -146,6 +160,8 @@ Copia el `access_token` de la respuesta.
 
     py -m pytest tests/ -v
 
+También se ejecutan automáticamente en cada push a `main` vía **GitHub Actions**.
+
 ## 📥 Migración de datos
 
 Si tienes un `tareas.json` del proyecto anterior:
@@ -166,6 +182,7 @@ La API está desplegada en **Render** con:
 - **Región**: Ohio (US East)
 - **Variables de entorno**: `JWT_SECRET_KEY`, `DATABASE_URL`, `FLASK_ENV`, `JWT_ACCESS_TOKEN_EXPIRES`
 - **Servidor**: Gunicorn con 1 worker (para evitar race conditions al crear tablas)
+- **CI/CD**: GitHub Actions ejecuta los tests en cada push
 
 ### Arquitectura del Dockerfile
 
@@ -173,20 +190,62 @@ La API está desplegada en **Render** con:
 - **Stage 2 (runtime)**: imagen final ligera, usuario no-root (`appuser`), solo lo necesario.
 - **Entrypoint**: crea las tablas antes de arrancar gunicorn.
 
+## 🧠 Decisiones técnicas
+
+### ¿Por qué JWT en lugar de sesiones con cookies?
+JWT permite que la API sea **stateless**. Cada petición lleva el token y el servidor no necesita recordar quién está logueado. Esto facilita el escalado horizontal y es el estándar en APIs REST modernas.
+
+**Trade-off consciente:** El token se guarda en `localStorage`, lo cual es vulnerable a XSS. En una app bancaria usaría cookies `httpOnly`. Para un portafolio, `localStorage` es aceptable y permite que funcione desde cualquier dispositivo sin configuración extra de CORS.
+
+### ¿Por qué SQLite local y PostgreSQL en producción?
+- **SQLite (local):** cero configuración, un solo archivo, ideal para desarrollo rápido y tests.
+- **PostgreSQL (producción):** soporta concurrencia, transacciones robustas y es el estándar de la industria.
+
+El código detecta el motor automáticamente según el `DATABASE_URL`.
+
+### ¿Por qué Docker multi-stage?
+Reduce el tamaño de la imagen final separando el stage de construcción (con compiladores) del de ejecución (solo runtime). Usa un usuario no-root para reducir la superficie de ataque.
+
+### ¿Por qué Render?
+Free tier generoso, deploy automático al hacer push, soporte nativo para Docker y PostgreSQL. Ideal para portafolios.
+
+## 🗺️ Roadmap futuro
+
+- Refresh tokens (JWT con expiración más larga).
+- Roles (admin / user) para compartir tareas.
+- WebSockets para actualizaciones en tiempo real.
+- Notificaciones push cuando vence una tarea.
+- Tests de frontend con Playwright.
+- Migrar a Supabase cuando expire la DB de Render (90 días).
+
 ## 📁 Estructura
 
     gestor-tareas-api/
+    ├── .github/workflows/   # CI con GitHub Actions
+    │   └── tests.yml
     ├── app/
-    │   ├── __init__.py       # Factory + JWT + logging
-    │   ├── models.py         # Usuario + Tarea
-    │   ├── routes.py         # Endpoints de tareas
-    │   ├── auth.py           # Endpoints de autenticación
-    │   ├── validators.py     # Validaciones
-    │   └── utils.py          # Helpers (email, password)
+    │   ├── __init__.py      # Factory + JWT + logging
+    │   ├── models.py        # Usuario + Tarea
+    │   ├── routes.py        # Endpoints de tareas
+    │   ├── auth.py          # Endpoints de autenticación
+    │   ├── validators.py    # Validaciones
+    │   ├── utils.py         # Helpers (email, password)
+    │   ├── static/          # CSS + JavaScript
+    │   │   ├── css/style.css
+    │   │   └── js/
+    │   │       ├── api.js
+    │   │       ├── auth.js
+    │   │       └── tareas.js
+    │   └── templates/       # HTML del frontend
+    │       ├── login.html
+    │       ├── registro.html
+    │       └── dashboard.html
+    ├── docs/screenshots/    # Capturas del proyecto
     ├── tests/
     │   └── test_tareas.py
+    ├── conftest.py
     ├── migrar_json.py
-    ├── entrypoint.sh         # Script de arranque para Docker
+    ├── entrypoint.sh        # Script de arranque para Docker
     ├── Dockerfile
     ├── docker-compose.yml
     ├── .dockerignore
