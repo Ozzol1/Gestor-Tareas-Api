@@ -27,6 +27,6 @@ jobs:
       - name: Ejecutar tests con pytest
         env:
           JWT_SECRET_KEY: "clave-de-test-para-ci-suficientemente-larga-32-bytes"
-          DATABASE_URL: "sqlite:///:memory:"
+          DATABASE_URL: "sqlite:///./test_ci.db"
         run: |
-          pytest tests/ -v
+          python -m pytest tests/ -v --tb=short

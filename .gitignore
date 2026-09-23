@@ -10,3 +10,4 @@ venv/
 tareas.json
 app.log
 instance/
+test_ci.db
