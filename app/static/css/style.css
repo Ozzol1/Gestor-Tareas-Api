@@ -467,3 +467,534 @@ a:hover {
         padding: 5px 8px;
     }
 }
+
+/* ====================================================
+   FILTROS + EXPORTAR
+   ==================================================== */
+   .filtros {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filtros-grupo {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.exportar-grupo {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-export {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-export:hover {
+    transform: translateY(-1px);
+}
+
+.btn-export-pdf {
+    background: #9b59b6;
+}
+.btn-export-pdf:hover {
+    background: #8e44ad;
+}
+
+.btn-export-excel {
+    background: #27ae60;
+}
+.btn-export-excel:hover {
+    background: #219a52;
+}
+
+.tarea-actions .btn-export-tarea {
+    background: #9b59b6;
+}
+.tarea-actions .btn-export-tarea:hover {
+    background: #8e44ad;
+}
+
+@media (max-width: 600px) {
+    .filtros {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filtros-grupo,
+    .exportar-grupo {
+        justify-content: center;
+    }
+    .exportar-grupo .btn-export {
+        flex: 1;
+    }
+}
+
+/* ====================================================
+   MODAL DE EXPORTAR
+   ==================================================== */
+   .modal-exportar {
+    max-width: 600px;
+}
+
+.exportar-subtitulo {
+    color: #7f8c8d;
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+    word-break: break-word;
+}
+
+.exportar-opciones {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn-export-opcion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 10px;
+    border: 2px solid #ecf0f1;
+    border-radius: 12px;
+    background: white;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: normal;
+    width: 100%;
+    gap: 6px;
+}
+
+.btn-export-opcion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.btn-export-opcion .icono-formato {
+    font-size: 2em;
+    line-height: 1;
+}
+
+.btn-export-opcion .nombre-formato {
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+.btn-export-opcion .desc-formato {
+    font-size: 0.75em;
+    color: #95a5a6;
+}
+
+/* Colores al hover */
+.btn-export-opcion.btn-export-txt:hover {
+    border-color: #3498db;
+    background: #f0f8ff;
+}
+
+.btn-export-opcion.btn-export-pdf:hover {
+    border-color: #9b59b6;
+    background: #f8f0ff;
+}
+
+.btn-export-opcion.btn-export-excel:hover {
+    border-color: #27ae60;
+    background: #f0fff4;
+}
+
+@media (max-width: 500px) {
+    .exportar-opciones {
+        grid-template-columns: 1fr;
+    }
+    .btn-export-opcion {
+        flex-direction: row;
+        padding: 15px;
+        gap: 15px;
+        justify-content: flex-start;
+    }
+    .btn-export-opcion .icono-formato {
+        font-size: 1.5em;
+    }
+    .btn-export-opcion .desc-formato {
+        margin-left: auto;
+    }
+}
+
+/* ====================================================
+   ANIMACIÓN DE SALIDA SUAVE (fade-out)
+   ==================================================== */
+   .exito,
+   .error {
+       overflow: hidden;
+       transform-origin: top center;
+   }
+   
+   .exito.fade-out,
+   .error.fade-out {
+       animation: fadeOutSuave 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+   }
+   
+   @keyframes fadeOutSuave {
+       0% {
+           opacity: 1;
+           transform: translateY(0) scaleY(1);
+           max-height: 200px;
+       }
+       40% {
+           opacity: 0.6;
+           transform: translateY(-4px) scaleY(1);
+           max-height: 200px;
+       }
+       100% {
+           opacity: 0;
+           transform: translateY(-12px) scaleY(0.85);
+           max-height: 0;
+           padding-top: 0;
+           padding-bottom: 0;
+           margin-top: 0;
+           margin-bottom: 0;
+       }
+   }
+
+   /* ====================================================
+   BOTÓN DE CERRAR SESIÓN (mejorado)
+   ==================================================== */
+.btn-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 8px 16px;
+    background: transparent;
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+    font-size: 0.9em;
+    font-weight: 600;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-logout .icono-logout {
+    font-size: 1.1em;
+    transition: transform 0.25s ease;
+}
+
+.btn-logout:hover {
+    background: #e74c3c;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn-logout:hover .icono-logout {
+    transform: translateX(3px) rotate(-10deg);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.2);
+}
+
+/* ====================================================
+   MODAL DE CONFIRMACIÓN (logout)
+   ==================================================== */
+.modal-confirm {
+    max-width: 420px;
+    text-align: center;
+    padding: 35px 30px 25px;
+    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.confirm-icon {
+    font-size: 3.5em;
+    margin-bottom: 10px;
+    animation: waveHand 1.5s ease-in-out infinite;
+    transform-origin: 70% 70%;
+    display: inline-block;
+}
+
+@keyframes waveHand {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-8deg); }
+    45% { transform: rotate(14deg); }
+    60% { transform: rotate(-4deg); }
+    75% { transform: rotate(10deg); }
+}
+
+.confirm-titulo {
+    color: #2c3e50;
+    font-size: 1.4em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.confirm-texto {
+    color: #7f8c8d;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 0;
+}
+
+.confirm-actions button {
+    flex: 1;
+    max-width: 180px;
+    padding: 12px 18px;
+    font-size: 0.95em;
+}
+
+.btn-danger {
+    background: #e74c3c;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+/* ====================================================
+   RESPONSIVE (logout)
+   ==================================================== */
+@media (max-width: 600px) {
+    .btn-logout span:not(.icono-logout) {
+        display: none;
+    }
+
+    .btn-logout {
+        padding: 8px 12px;
+        border-radius: 50%;
+        width: 42px;
+        height: 42px;
+        justify-content: center;
+    }
+
+    .confirm-actions {
+        flex-direction: column;
+    }
+
+    .confirm-actions button {
+        max-width: 100%;
+    }
+}
+
+/* ====================================================
+   MODAL DE ÉXITO DE REGISTRO
+   ==================================================== */
+   .modal-exito {
+    max-width: 400px;
+    text-align: center;
+    padding: 40px 30px 30px;
+    animation: modalExitoEntrada 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    overflow: hidden;
+    position: relative;
+}
+
+@keyframes modalExitoEntrada {
+    from {
+        opacity: 0;
+        transform: scale(0.7) translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Ícono de check animado (SVG) */
+.exito-icono {
+    display: inline-block;
+    width: 90px;
+    height: 90px;
+    margin-bottom: 20px;
+}
+
+.check-svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+}
+
+.check-circle {
+    stroke: #2ecc71;
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    fill: #eafaf1;
+    animation: trazoCirculo 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.check-mark {
+    stroke: #2ecc71;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: trazoCheck 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+@keyframes trazoCirculo {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes trazoCheck {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.exito-titulo {
+    color: #27ae60;
+    font-size: 1.5em;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+    animation: fadeUp 0.5s ease-out 0.7s both;
+}
+
+.exito-texto {
+    color: #7f8c8d;
+    font-size: 0.95em;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 25px;
+    animation: fadeUp 0.5s ease-out 0.9s both;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Barra de progreso de redirección */
+.exito-progress {
+    width: 100%;
+    height: 4px;
+    background: #ecf0f1;
+    border-radius: 2px;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease-out 1s both;
+}
+
+.exito-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
+    border-radius: 2px;
+    width: 0%;
+    animation: progressBar 2.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+}
+
+@keyframes progressBar {
+    from {
+        width: 0%;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+/* Partículas de confeti (opcional pero bonito) */
+.modal-exito::before,
+.modal-exito::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: confeti 1.5s ease-out 0.5s forwards;
+    opacity: 0;
+}
+
+.modal-exito::before {
+    background: #f39c12;
+    top: 20%;
+    left: 15%;
+    animation-delay: 0.6s;
+}
+
+.modal-exito::after {
+    background: #3498db;
+    top: 15%;
+    right: 15%;
+    animation-delay: 0.8s;
+}
+
+@keyframes confeti {
+    0% {
+        opacity: 1;
+        transform: scale(0) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.5) rotate(180deg);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0) rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .modal-exito {
+        padding: 30px 20px 25px;
+    }
+    .exito-icono {
+        width: 70px;
+        height: 70px;
+    }
+    .exito-titulo {
+        font-size: 1.3em;
+    }
+}

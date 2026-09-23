@@ -30,6 +30,26 @@
         <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
     </div>
 
+    <!-- Modal de éxito (registro) -->
+    <div id="modal-exito-registro" class="modal hidden">
+        <div class="modal-content modal-exito">
+            <div class="exito-icono">
+                <svg class="check-svg" viewBox="0 0 52 52">
+                    <circle class="check-circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="check-mark" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+            </div>
+            <h2 class="exito-titulo">¡Cuenta creada!</h2>
+            <p class="exito-texto">
+                Tu cuenta ha sido registrada exitosamente.<br>
+                Serás redirigido al inicio de sesión...
+            </p>
+            <div class="exito-progress">
+                <div class="exito-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </body>

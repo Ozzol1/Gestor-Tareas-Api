@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Asegurar que el modal esté cerrado al cargar
     document.getElementById("modal-editar").classList.add("hidden");
     tareaEditandoId = null;
 
@@ -84,6 +83,7 @@ function renderizarTareas() {
                         ${t.completada ? "↩️ Reabrir" : "✅ Completar"}
                     </button>
                     <button class="btn-edit" data-id="${t.id}">✏️ Editar</button>
+                    <button class="btn-export-tarea" data-id="${t.id}" title="Exportar esta tarea">📥 Exportar</button>
                     <button class="btn-delete" data-id="${t.id}">🗑️ Eliminar</button>
                 </div>
             </div>
@@ -96,11 +96,125 @@ function renderizarTareas() {
     lista.querySelectorAll(".btn-edit").forEach(btn => {
         btn.addEventListener("click", () => abrirModalEditar(parseInt(btn.dataset.id)));
     });
+    lista.querySelectorAll(".btn-export-tarea").forEach(btn => {
+        btn.addEventListener("click", () => mostrarMenuExportar(parseInt(btn.dataset.id)));
+    });
     lista.querySelectorAll(".btn-delete").forEach(btn => {
         btn.addEventListener("click", () => eliminarTarea(parseInt(btn.dataset.id)));
     });
 }
 
+// ====================================================
+// DESCARGAR ARCHIVOS (con token JWT)
+// ====================================================
+async function descargarArchivo(endpoint, nombreSugerido) {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+        window.location.href = "/login";
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(endpoint, {
+            headers: { "Authorization": `Bearer ${token}` },
+        });
+
+        if (!respuesta.ok) {
+            let errorData = {};
+            try { errorData = await respuesta.json(); } catch (e) {}
+            mostrarError(errorData.error || "Error al exportar. Intenta de nuevo.");
+            return;
+        }
+
+        // Leer como blob
+        const blob = await respuesta.blob();
+
+        // Crear link temporal y forzar descarga
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = nombreSugerido;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        mostrarExito("✅ Archivo descargado");
+    } catch (err) {
+        console.error("Error al descargar:", err);
+        mostrarError("No se pudo descargar el archivo.");
+    }
+}
+
+function exportarTodasPDF() {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    descargarArchivo("/tareas/export/pdf", `tareas_${timestamp}.pdf`);
+}
+
+function exportarTodasExcel() {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    descargarArchivo("/tareas/export/excel", `tareas_${timestamp}.xlsx`);
+}
+
+// ====================================================
+// MENÚ DE EXPORTAR TAREA INDIVIDUAL
+// ====================================================
+// ====================================================
+// MENÚ DE EXPORTAR TAREA INDIVIDUAL (MODAL)
+// ====================================================
+let tareaExportandoId = null;
+
+function mostrarMenuExportar(id) {
+    const tarea = tareas.find(t => t.id === id);
+    if (!tarea) return;
+
+    tareaExportandoId = tarea.id;
+
+    // Mostrar el título de la tarea en el modal
+    document.getElementById("exportar-titulo").textContent =
+        `"${tarea.titulo}"`;
+
+    document.getElementById("modal-exportar").classList.remove("hidden");
+}
+
+function cerrarModalExportar() {
+    document.getElementById("modal-exportar").classList.add("hidden");
+    tareaExportandoId = null;
+}
+
+function exportarTareaEnFormato(formato) {
+    if (!tareaExportandoId) {
+        mostrarError("No se seleccionó una tarea.");
+        cerrarModalExportar();
+        return;
+    }
+
+    const tarea = tareas.find(t => t.id === tareaExportandoId);
+    if (!tarea) {
+        mostrarError("No se encontró la tarea.");
+        cerrarModalExportar();
+        return;
+    }
+
+    // Nombre del archivo basado en el título (sanitizado)
+    const nombreBase = `tarea_${tarea.id}_${tarea.titulo.replace(/[^\w]/g, "_").slice(0, 30)}`;
+
+    const endpoints = {
+        txt: { url: `/tareas/${tarea.id}/export/txt`, nombre: `${nombreBase}.txt` },
+        pdf: { url: `/tareas/${tarea.id}/export/pdf`, nombre: `${nombreBase}.pdf` },
+        excel: { url: `/tareas/${tarea.id}/export/excel`, nombre: `${nombreBase}.xlsx` },
+    };
+
+    const config = endpoints[formato];
+    if (!config) {
+        mostrarError("Formato no válido.");
+        cerrarModalExportar();
+        return;
+    }
+
+    cerrarModalExportar();
+    descargarArchivo(config.url, config.nombre);
+}
 // ====================================================
 // CREAR TAREA
 // ====================================================
@@ -153,7 +267,6 @@ async function toggleCompletada(id) {
     });
 
     if (ok) {
-        // Actualizar localmente sin re-fetch
         tarea.completada = !tarea.completada;
         renderizarTareas();
         mostrarExito(tarea.completada ? "✅ Tarea completada" : "↩️ Tarea reabierta");
@@ -167,10 +280,7 @@ async function toggleCompletada(id) {
 // ====================================================
 function abrirModalEditar(id) {
     const tarea = tareas.find(t => t.id === id);
-    if (!tarea) {
-        console.error("No se encontró la tarea con ID:", id);
-        return;
-    }
+    if (!tarea) return;
 
     tareaEditandoId = tarea.id;
 
@@ -194,7 +304,6 @@ async function guardarEdicion(e) {
     ocultarError();
 
     const id = tareaEditandoId;
-
     if (!id) {
         mostrarError("Error: no se encontró el ID de la tarea");
         return;
@@ -223,13 +332,9 @@ async function guardarEdicion(e) {
     boton.textContent = "Guardar";
 
     if (ok) {
-        // ✅ Actualizar el array local con los datos devueltos por la API
         const index = tareas.findIndex(t => t.id === id);
-        if (index !== -1) {
-            tareas[index] = data;
-        }
+        if (index !== -1) tareas[index] = data;
 
-        // Cerrar modal y re-renderizar inmediatamente
         cerrarModalEditar();
         renderizarTareas();
         mostrarExito("✅ Tarea editada exitosamente");
@@ -244,9 +349,7 @@ async function guardarEdicion(e) {
 async function eliminarTarea(id) {
     if (!confirm("¿Estás seguro de eliminar esta tarea?")) return;
 
-    const { ok, data } = await apiFetch(`/tareas/${id}`, {
-        method: "DELETE",
-    });
+    const { ok, data } = await apiFetch(`/tareas/${id}`, { method: "DELETE" });
 
     if (ok) {
         tareas = tareas.filter(t => t.id !== id);
@@ -278,9 +381,17 @@ function configurarEventos() {
     document.getElementById("form-nueva-tarea").addEventListener("submit", crearTarea);
     document.getElementById("form-editar").addEventListener("submit", guardarEdicion);
     document.getElementById("btn-cancelar-edicion").addEventListener("click", cerrarModalEditar);
+    document.getElementById("btn-cancelar-exportar").addEventListener("click", cerrarModalExportar);
+    document.getElementById("btn-export-pdf").addEventListener("click", exportarTodasPDF);
+    document.getElementById("btn-export-excel").addEventListener("click", exportarTodasExcel);
+
+    // Botones de formato en el modal de exportar
+    document.querySelectorAll(".btn-export-opcion").forEach(btn => {
+        btn.addEventListener("click", () => exportarTareaEnFormato(btn.dataset.formato));
+    });
+
     configurarFiltros();
 }
-
 // ====================================================
 // UTILIDADES
 // ====================================================

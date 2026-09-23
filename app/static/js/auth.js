@@ -10,7 +10,6 @@ if (loginForm) {
         const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value;
 
-        // Validación local antes de llamar a la API
         if (!email && !password) {
             mostrarError("⚠️ Debes ingresar tu email y contraseña.");
             return;
@@ -26,7 +25,6 @@ if (loginForm) {
             return;
         }
 
-        // Validación de formato de email
         const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
         if (!emailRegex.test(email)) {
             mostrarError("⚠️ El formato del email no es válido. Ejemplo: usuario@dominio.com");
@@ -34,7 +32,6 @@ if (loginForm) {
             return;
         }
 
-        // Deshabilitar el botón mientras se hace la petición
         const boton = loginForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
@@ -46,7 +43,6 @@ if (loginForm) {
             skipAuthRedirect: true,
         });
 
-        // Restaurar el botón
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
@@ -54,11 +50,9 @@ if (loginForm) {
             localStorage.setItem("access_token", data.access_token);
             window.location.href = "/dashboard";
         } else {
-            // Mensajes claros según el tipo de error
             let mensaje = "❌ El email o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo.";
 
             if (data && data.error) {
-                // Personalizar el mensaje de "Credenciales inválidas"
                 if (data.error.toLowerCase().includes("credenciales")) {
                     mensaje = "❌ El email o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo.";
                 } else {
@@ -67,7 +61,6 @@ if (loginForm) {
             }
 
             mostrarError(mensaje);
-            // Limpiar solo la contraseña (para que el usuario no tenga que reescribir el email)
             document.getElementById("password").value = "";
             document.getElementById("password").focus();
         }
@@ -86,7 +79,6 @@ if (registroForm) {
         const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value;
 
-        // Validaciones locales
         if (!email && !password) {
             mostrarError("⚠️ Debes completar todos los campos.");
             return;
@@ -115,7 +107,6 @@ if (registroForm) {
             return;
         }
 
-        // Deshabilitar botón
         const boton = registroForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
@@ -131,8 +122,8 @@ if (registroForm) {
         boton.textContent = textoOriginal;
 
         if (ok) {
-            alert("✅ ¡Cuenta creada con éxito! Ahora inicia sesión.");
-            window.location.href = "/login";
+            // Mostrar modal de éxito con animaciones
+            mostrarModalExitoRegistro();
         } else {
             let mensaje = "❌ Error al crear la cuenta. Intenta de nuevo.";
 
@@ -154,14 +145,69 @@ if (registroForm) {
 }
 
 // ====================================================
-// LOGOUT
+// MODAL DE ÉXITO DE REGISTRO
+// ====================================================
+function mostrarModalExitoRegistro() {
+    const modal = document.getElementById("modal-exito-registro");
+    if (!modal) {
+        // Fallback
+        alert("¡Cuenta creada con éxito! Ahora inicia sesión.");
+        window.location.href = "/login";
+        return;
+    }
+
+    modal.classList.remove("hidden");
+
+    // Redirigir tras la animación (2.8s)
+    setTimeout(() => {
+        window.location.href = "/login";
+    }, 2800);
+}
+
+// ====================================================
+// LOGOUT CON MODAL DE CONFIRMACIÓN
 // ====================================================
 const btnLogout = document.getElementById("btn-logout");
 if (btnLogout) {
     btnLogout.addEventListener("click", () => {
-        if (confirm("¿Seguro que quieres cerrar sesión?")) {
-            localStorage.removeItem("access_token");
-            window.location.href = "/login";
+        const modal = document.getElementById("modal-logout");
+        if (modal) {
+            modal.classList.remove("hidden");
+        } else {
+            if (confirm("¿Seguro que quieres cerrar sesión?")) {
+                localStorage.removeItem("access_token");
+                window.location.href = "/login";
+            }
+        }
+    });
+}
+
+const btnCancelarLogout = document.getElementById("btn-cancelar-logout");
+if (btnCancelarLogout) {
+    btnCancelarLogout.addEventListener("click", () => {
+        document.getElementById("modal-logout").classList.add("hidden");
+    });
+}
+
+const btnConfirmarLogout = document.getElementById("btn-confirmar-logout");
+if (btnConfirmarLogout) {
+    btnConfirmarLogout.addEventListener("click", () => {
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
+    });
+}
+
+const modalLogout = document.getElementById("modal-logout");
+if (modalLogout) {
+    modalLogout.addEventListener("click", (e) => {
+        if (e.target === modalLogout) {
+            modalLogout.classList.add("hidden");
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !modalLogout.classList.contains("hidden")) {
+            modalLogout.classList.add("hidden");
         }
     });
 }

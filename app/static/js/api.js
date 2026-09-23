@@ -22,7 +22,7 @@ async function apiFetch(endpoint, options = {}) {
         response = await fetch(`${API_URL}${endpoint}`, {
             ...fetchOptions,
             headers,
-            cache: "no-store", // 👈 evita respuestas cacheadas
+            cache: "no-store",
         });
     } catch (err) {
         return {
@@ -49,42 +49,75 @@ async function apiFetch(endpoint, options = {}) {
     return { ok: response.ok, status: response.status, data };
 }
 
-// ----------------------------------------------------
-// MENSAJES
-// ----------------------------------------------------
+// ====================================================
+// SISTEMA DE MENSAJES CON ANIMACIÓN DE SALIDA SUAVE
+// ====================================================
 let timeoutExito = null;
+
+/**
+ * Oculta un elemento con animación de fade-out.
+ */
+function _ocultarConAnimacion(el) {
+    if (!el || el.classList.contains("hidden")) return;
+
+    // Quitar fade-out previo si lo hubiera
+    el.classList.remove("fade-out");
+    // Forzar reflow para reiniciar la animación
+    void el.offsetWidth;
+    // Aplicar animación
+    el.classList.add("fade-out");
+
+    el.addEventListener("animationend", () => {
+        el.classList.add("hidden");
+        el.classList.remove("fade-out");
+    }, { once: true });
+}
+
+/**
+ * Muestra un elemento reseteando su estado y animaciones previas.
+ */
+function _prepararParaMostrar(el, mensaje) {
+    if (!el) return;
+
+    // Cancelar cualquier animación de salida en curso
+    el.classList.remove("hidden", "fade-out");
+    // Forzar reflow para reiniciar la animación de entrada
+    void el.offsetWidth;
+
+    el.textContent = mensaje;
+}
 
 function mostrarError(mensaje) {
     const el = document.getElementById("mensaje-error");
     if (!el) return;
-    el.textContent = mensaje;
-    el.classList.remove("hidden");
-    // También ocultamos el mensaje de éxito si aparece uno nuevo
+
+    _prepararParaMostrar(el, mensaje);
     ocultarExito();
 }
 
 function ocultarError() {
     const el = document.getElementById("mensaje-error");
-    if (el) el.classList.add("hidden");
+    if (el) _ocultarConAnimacion(el);
 }
 
 function mostrarExito(mensaje) {
     const el = document.getElementById("mensaje-exito");
     if (!el) return;
-    el.textContent = mensaje;
-    el.classList.remove("hidden");
+
+    _prepararParaMostrar(el, mensaje);
     ocultarError();
 
-    // Auto-ocultar después de 3 segundos
+    // Auto-ocultar después de 3 segundos con animación suave
     if (timeoutExito) clearTimeout(timeoutExito);
     timeoutExito = setTimeout(() => {
-        el.classList.add("hidden");
+        _ocultarConAnimacion(el);
+        timeoutExito = null;
     }, 3000);
 }
 
 function ocultarExito() {
     const el = document.getElementById("mensaje-exito");
-    if (el) el.classList.add("hidden");
+    if (el) _ocultarConAnimacion(el);
     if (timeoutExito) {
         clearTimeout(timeoutExito);
         timeoutExito = null;

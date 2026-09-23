@@ -12,7 +12,10 @@
             <h1>📋 Mis Tareas</h1>
             <div class="header-actions">
                 <span id="user-email" class="user-email"></span>
-                <button id="btn-logout" class="btn-logout">Cerrar sesión</button>
+                <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
+                    <span class="icono-logout">🚪</span>
+                    <span>Salir</span>
+                </button>
             </div>
         </header>
 
@@ -51,11 +54,21 @@
             </form>
         </section>
 
-        <!-- Filtros -->
+        <!-- Filtros y exportación -->
         <section class="filtros">
-            <button class="filtro-btn active" data-filtro="todas">Todas</button>
-            <button class="filtro-btn" data-filtro="pendientes">⏳ Pendientes</button>
-            <button class="filtro-btn" data-filtro="completadas">✅ Completadas</button>
+            <div class="filtros-grupo">
+                <button class="filtro-btn active" data-filtro="todas">Todas</button>
+                <button class="filtro-btn" data-filtro="pendientes">⏳ Pendientes</button>
+                <button class="filtro-btn" data-filtro="completadas">✅ Completadas</button>
+            </div>
+            <div class="exportar-grupo">
+                <button id="btn-export-pdf" class="btn-export btn-export-pdf" title="Descargar todas las tareas en PDF">
+                    📄 Exportar PDF
+                </button>
+                <button id="btn-export-excel" class="btn-export btn-export-excel" title="Descargar todas las tareas en Excel">
+                    📊 Exportar Excel
+                </button>
+            </div>
         </section>
 
         <!-- Lista de tareas -->
@@ -97,6 +110,49 @@
                     <button type="submit" id="btn-guardar-edicion">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de exportar tarea -->
+    <div id="modal-exportar" class="modal hidden">
+        <div class="modal-content modal-exportar">
+            <h2>📥 Exportar Tarea</h2>
+            <p id="exportar-titulo" class="exportar-subtitulo"></p>
+            <div class="exportar-opciones">
+                <button type="button" class="btn-export-opcion btn-export-txt" data-formato="txt">
+                    <span class="icono-formato">📄</span>
+                    <span class="nombre-formato">TXT</span>
+                    <span class="desc-formato">Texto plano</span>
+                </button>
+                <button type="button" class="btn-export-opcion btn-export-pdf" data-formato="pdf">
+                    <span class="icono-formato">📕</span>
+                    <span class="nombre-formato">PDF</span>
+                    <span class="desc-formato">Documento</span>
+                </button>
+                <button type="button" class="btn-export-opcion btn-export-excel" data-formato="excel">
+                    <span class="icono-formato">📊</span>
+                    <span class="nombre-formato">Excel</span>
+                    <span class="desc-formato">Hoja de cálculo</span>
+                </button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btn-cancelar-exportar" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación de cerrar sesión -->
+    <div id="modal-logout" class="modal hidden">
+        <div class="modal-content modal-confirm">
+            <div class="confirm-icon">👋</div>
+            <h2 class="confirm-titulo">¿Cerrar sesión?</h2>
+            <p class="confirm-texto">
+                Tendrás que iniciar sesión de nuevo para acceder a tus tareas.
+            </p>
+            <div class="modal-actions confirm-actions">
+                <button type="button" id="btn-cancelar-logout" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-confirmar-logout" class="btn-danger">Sí, cerrar sesión</button>
+            </div>
         </div>
     </div>
 
