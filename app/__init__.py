@@ -69,5 +69,22 @@ def create_app(config_override=None):
     @app.route("/health")
     def health():
         return {"status": "ok"}, 200
+    # ----------------------------------------------------
+    # RUTAS DEL FRONTEND
+    # ----------------------------------------------------
+    from flask import render_template
 
+    @app.route("/")
+    @app.route("/login")
+    def login_page():
+        return render_template("login.html")
+
+    @app.route("/registro")
+    def registro_page():
+        return render_template("registro.html")
+
+    @app.route("/dashboard")
+    def dashboard_page():
+        return render_template("dashboard.html")
+    
     return app
