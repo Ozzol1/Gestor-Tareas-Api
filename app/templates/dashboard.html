@@ -73,7 +73,7 @@
 
         <!-- Lista de tareas -->
         <section id="lista-tareas" class="lista-tareas">
-            <div class="loading">Cargando tareas...</div>
+            <!-- Aquí se renderizan las tareas, skeletons, o empty state -->
         </section>
     </div>
 
@@ -155,6 +155,23 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de confirmación de eliminar tarea -->
+    <div id="modal-eliminar" class="modal hidden">
+        <div class="modal-content modal-confirm">
+            <div class="confirm-icon">🗑️</div>
+            <h2 class="confirm-titulo">¿Eliminar tarea?</h2>
+            <p class="confirm-texto" id="eliminar-nombre-tarea"></p>
+            <p class="confirm-texto-small">Esta acción no se puede deshacer.</p>
+            <div class="modal-actions confirm-actions">
+                <button type="button" id="btn-cancelar-eliminar" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-confirmar-eliminar" class="btn-danger">Sí, eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de toasts (notificaciones flotantes) -->
+    <div id="toast-container" aria-live="polite"></div>
 
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>

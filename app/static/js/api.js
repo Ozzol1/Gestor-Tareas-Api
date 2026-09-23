@@ -123,3 +123,52 @@ function ocultarExito() {
         timeoutExito = null;
     }
 }
+
+// ====================================================
+// SISTEMA DE TOASTS (NOTIFICACIONES FLOTANTES)
+// ====================================================
+function mostrarToast(mensaje, tipo = "success", duracion = 3500) {
+    // Crear contenedor si no existe
+    let contenedor = document.getElementById("toast-container");
+    if (!contenedor) {
+        contenedor = document.createElement("div");
+        contenedor.id = "toast-container";
+        contenedor.setAttribute("aria-live", "polite");
+        document.body.appendChild(contenedor);
+    }
+
+    const iconos = { success: "✅", error: "❌", info: "ℹ️", warning: "⚠️" };
+    const icono = iconos[tipo] || "ℹ️";
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${tipo}`;
+    toast.innerHTML = `
+        <span class="toast-icono">${icono}</span>
+        <span class="toast-mensaje">${mensaje}</span>
+        <button class="toast-cerrar" aria-label="Cerrar">&times;</button>
+    `;
+
+    contenedor.appendChild(toast);
+
+    // Forzar animación de entrada
+    requestAnimationFrame(() => {
+        toast.classList.add("toast-visible");
+    });
+
+    const cerrar = () => {
+        // No removemos toast-visible: dejamos que la animación de salida
+        // se encargue de todo para que la transición sea fluida.
+        toast.classList.add("toast-saliendo");
+        toast.addEventListener("animationend", () => toast.remove(), { once: true });
+    };
+
+    // Cerrar al hacer clic en X
+    toast.querySelector(".toast-cerrar").addEventListener("click", cerrar);
+
+    // Auto-cerrar
+    const timer = setTimeout(cerrar, duracion);
+    // Si el usuario cierra antes, limpiamos el timer
+    toast.addEventListener("click", (e) => {
+        if (e.target.classList.contains("toast-cerrar")) clearTimeout(timer);
+    });
+}

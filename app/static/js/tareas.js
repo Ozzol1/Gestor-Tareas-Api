@@ -4,6 +4,8 @@
 let tareas = [];
 let filtroActual = "todas";
 let tareaEditandoId = null;
+let tareaExportandoId = null;
+let tareaEliminandoId = null;
 
 // ====================================================
 // INICIALIZACIÓN
@@ -31,11 +33,11 @@ async function cargarPerfil() {
 }
 
 // ====================================================
-// CARGAR TAREAS
+// CARGAR TAREAS (CON SKELETON LOADER)
 // ====================================================
 async function cargarTareas() {
     const lista = document.getElementById("lista-tareas");
-    lista.innerHTML = '<div class="loading">Cargando tareas...</div>';
+    lista.innerHTML = renderizarSkeletons();
 
     const { ok, data } = await apiFetch("/tareas");
 
@@ -44,11 +46,31 @@ async function cargarTareas() {
         renderizarTareas();
     } else {
         lista.innerHTML = '<div class="loading">Error al cargar tareas</div>';
+        mostrarToast("Error al cargar las tareas", "error");
     }
 }
 
+function renderizarSkeletons() {
+    const skeleton = `
+        <div class="skeleton-card">
+            <div class="skeleton-header">
+                <div class="skeleton-line skeleton-titulo"></div>
+                <div class="skeleton-badge"></div>
+            </div>
+            <div class="skeleton-line skeleton-descripcion"></div>
+            <div class="skeleton-line skeleton-fecha"></div>
+            <div class="skeleton-actions">
+                <div class="skeleton-btn"></div>
+                <div class="skeleton-btn"></div>
+                <div class="skeleton-btn"></div>
+            </div>
+        </div>
+    `;
+    return skeleton.repeat(3);
+}
+
 // ====================================================
-// RENDERIZAR
+// RENDERIZAR TAREAS
 // ====================================================
 function renderizarTareas() {
     const lista = document.getElementById("lista-tareas");
@@ -61,17 +83,17 @@ function renderizarTareas() {
     }
 
     if (filtradas.length === 0) {
-        lista.innerHTML = '<div class="empty-state">📭 No hay tareas que mostrar</div>';
+        lista.innerHTML = renderizarEmptyState();
         return;
     }
 
-    lista.innerHTML = filtradas.map(t => {
+    lista.innerHTML = filtradas.map((t, i) => {
         const clases = ["tarea-card"];
         if (t.completada) clases.push("completada");
         clases.push(`prioridad-${t.prioridad}`);
 
         return `
-            <div class="${clases.join(' ')}">
+            <div class="${clases.join(' ')}" style="animation-delay: ${i * 0.05}s">
                 <div class="tarea-header">
                     <h3>${escapeHtml(t.titulo)}</h3>
                     <span class="badge badge-${t.prioridad}">${t.prioridad}</span>
@@ -100,8 +122,38 @@ function renderizarTareas() {
         btn.addEventListener("click", () => mostrarMenuExportar(parseInt(btn.dataset.id)));
     });
     lista.querySelectorAll(".btn-delete").forEach(btn => {
-        btn.addEventListener("click", () => eliminarTarea(parseInt(btn.dataset.id)));
+        btn.addEventListener("click", () => abrirModalEliminar(parseInt(btn.dataset.id)));
     });
+}
+
+function renderizarEmptyState() {
+    const mensajes = {
+        todas: {
+            icono: "📝",
+            titulo: "No hay tareas todavía",
+            texto: "Crea tu primera tarea usando el formulario de arriba."
+        },
+        pendientes: {
+            icono: "🎉",
+            titulo: "¡Todo hecho!",
+            texto: "No tienes tareas pendientes. ¡Buen trabajo!"
+        },
+        completadas: {
+            icono: "🎯",
+            titulo: "Aún no has completado tareas",
+            texto: "Marca tus tareas como completadas para verlas aquí."
+        }
+    };
+
+    const m = mensajes[filtroActual] || mensajes.todas;
+
+    return `
+        <div class="empty-state-container">
+            <div class="empty-state-icono">${m.icono}</div>
+            <h3 class="empty-state-titulo">${m.titulo}</h3>
+            <p class="empty-state-texto">${m.texto}</p>
+        </div>
+    `;
 }
 
 // ====================================================
@@ -122,14 +174,11 @@ async function descargarArchivo(endpoint, nombreSugerido) {
         if (!respuesta.ok) {
             let errorData = {};
             try { errorData = await respuesta.json(); } catch (e) {}
-            mostrarError(errorData.error || "Error al exportar. Intenta de nuevo.");
+            mostrarToast(errorData.error || "Error al exportar", "error");
             return;
         }
 
-        // Leer como blob
         const blob = await respuesta.blob();
-
-        // Crear link temporal y forzar descarga
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -139,10 +188,10 @@ async function descargarArchivo(endpoint, nombreSugerido) {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        mostrarExito("✅ Archivo descargado");
+        mostrarToast("Archivo descargado", "success");
     } catch (err) {
         console.error("Error al descargar:", err);
-        mostrarError("No se pudo descargar el archivo.");
+        mostrarToast("No se pudo descargar el archivo", "error");
     }
 }
 
@@ -157,23 +206,14 @@ function exportarTodasExcel() {
 }
 
 // ====================================================
-// MENÚ DE EXPORTAR TAREA INDIVIDUAL
+// EXPORTAR TAREA INDIVIDUAL (MODAL)
 // ====================================================
-// ====================================================
-// MENÚ DE EXPORTAR TAREA INDIVIDUAL (MODAL)
-// ====================================================
-let tareaExportandoId = null;
-
 function mostrarMenuExportar(id) {
     const tarea = tareas.find(t => t.id === id);
     if (!tarea) return;
 
     tareaExportandoId = tarea.id;
-
-    // Mostrar el título de la tarea en el modal
-    document.getElementById("exportar-titulo").textContent =
-        `"${tarea.titulo}"`;
-
+    document.getElementById("exportar-titulo").textContent = `"${tarea.titulo}"`;
     document.getElementById("modal-exportar").classList.remove("hidden");
 }
 
@@ -183,20 +223,11 @@ function cerrarModalExportar() {
 }
 
 function exportarTareaEnFormato(formato) {
-    if (!tareaExportandoId) {
-        mostrarError("No se seleccionó una tarea.");
-        cerrarModalExportar();
-        return;
-    }
+    if (!tareaExportandoId) return;
 
     const tarea = tareas.find(t => t.id === tareaExportandoId);
-    if (!tarea) {
-        mostrarError("No se encontró la tarea.");
-        cerrarModalExportar();
-        return;
-    }
+    if (!tarea) { cerrarModalExportar(); return; }
 
-    // Nombre del archivo basado en el título (sanitizado)
     const nombreBase = `tarea_${tarea.id}_${tarea.titulo.replace(/[^\w]/g, "_").slice(0, 30)}`;
 
     const endpoints = {
@@ -206,21 +237,17 @@ function exportarTareaEnFormato(formato) {
     };
 
     const config = endpoints[formato];
-    if (!config) {
-        mostrarError("Formato no válido.");
-        cerrarModalExportar();
-        return;
-    }
+    if (!config) { cerrarModalExportar(); return; }
 
     cerrarModalExportar();
     descargarArchivo(config.url, config.nombre);
 }
+
 // ====================================================
 // CREAR TAREA
 // ====================================================
 async function crearTarea(e) {
     e.preventDefault();
-    ocultarError();
 
     const titulo = document.getElementById("titulo").value.trim();
     const descripcion = document.getElementById("descripcion").value.trim() || null;
@@ -228,7 +255,7 @@ async function crearTarea(e) {
     const fecha_limite = document.getElementById("fecha_limite").value || null;
 
     if (!titulo) {
-        mostrarError("El título no puede estar vacío");
+        mostrarToast("El título no puede estar vacío", "warning");
         return;
     }
 
@@ -248,9 +275,9 @@ async function crearTarea(e) {
         document.getElementById("form-nueva-tarea").reset();
         tareas.push(data);
         renderizarTareas();
-        mostrarExito("✅ Tarea creada exitosamente");
+        mostrarToast("Tarea creada exitosamente", "success");
     } else {
-        mostrarError(data.error || "Error al crear la tarea");
+        mostrarToast(data.error || "Error al crear la tarea", "error");
     }
 }
 
@@ -269,9 +296,12 @@ async function toggleCompletada(id) {
     if (ok) {
         tarea.completada = !tarea.completada;
         renderizarTareas();
-        mostrarExito(tarea.completada ? "✅ Tarea completada" : "↩️ Tarea reabierta");
+        mostrarToast(
+            tarea.completada ? "Tarea completada" : "Tarea reabierta",
+            "success"
+        );
     } else {
-        mostrarError(data.error || "Error al actualizar");
+        mostrarToast(data.error || "Error al actualizar", "error");
     }
 }
 
@@ -283,7 +313,6 @@ function abrirModalEditar(id) {
     if (!tarea) return;
 
     tareaEditandoId = tarea.id;
-
     document.getElementById("edit-id").value = tarea.id;
     document.getElementById("edit-titulo").value = tarea.titulo;
     document.getElementById("edit-descripcion").value = tarea.descripcion || "";
@@ -301,13 +330,9 @@ function cerrarModalEditar() {
 
 async function guardarEdicion(e) {
     e.preventDefault();
-    ocultarError();
 
     const id = tareaEditandoId;
-    if (!id) {
-        mostrarError("Error: no se encontró el ID de la tarea");
-        return;
-    }
+    if (!id) return;
 
     const titulo = document.getElementById("edit-titulo").value.trim();
     const descripcion = document.getElementById("edit-descripcion").value.trim() || null;
@@ -315,7 +340,7 @@ async function guardarEdicion(e) {
     const fecha_limite = document.getElementById("edit-fecha_limite").value || null;
 
     if (!titulo) {
-        mostrarError("El título no puede estar vacío");
+        mostrarToast("El título no puede estar vacío", "warning");
         return;
     }
 
@@ -334,29 +359,47 @@ async function guardarEdicion(e) {
     if (ok) {
         const index = tareas.findIndex(t => t.id === id);
         if (index !== -1) tareas[index] = data;
-
         cerrarModalEditar();
         renderizarTareas();
-        mostrarExito("✅ Tarea editada exitosamente");
+        mostrarToast("Tarea editada exitosamente", "success");
     } else {
-        mostrarError(data.error || "Error al guardar cambios");
+        mostrarToast(data.error || "Error al guardar cambios", "error");
     }
 }
 
 // ====================================================
-// ELIMINAR
+// MODAL DE ELIMINAR
 // ====================================================
-async function eliminarTarea(id) {
-    if (!confirm("¿Estás seguro de eliminar esta tarea?")) return;
+function abrirModalEliminar(id) {
+    const tarea = tareas.find(t => t.id === id);
+    if (!tarea) return;
+
+    tareaEliminandoId = tarea.id;
+    document.getElementById("eliminar-nombre-tarea").textContent =
+        `"${tarea.titulo}" se eliminará permanentemente.`;
+
+    document.getElementById("modal-eliminar").classList.remove("hidden");
+}
+
+function cerrarModalEliminar() {
+    document.getElementById("modal-eliminar").classList.add("hidden");
+    tareaEliminandoId = null;
+}
+
+async function confirmarEliminar() {
+    const id = tareaEliminandoId;
+    if (!id) return;
 
     const { ok, data } = await apiFetch(`/tareas/${id}`, { method: "DELETE" });
 
     if (ok) {
         tareas = tareas.filter(t => t.id !== id);
+        cerrarModalEliminar();
         renderizarTareas();
-        mostrarExito("🗑️ Tarea eliminada");
+        mostrarToast("Tarea eliminada", "success");
     } else {
-        mostrarError(data.error || "Error al eliminar");
+        mostrarToast(data.error || "Error al eliminar", "error");
+        cerrarModalEliminar();
     }
 }
 
@@ -382,16 +425,32 @@ function configurarEventos() {
     document.getElementById("form-editar").addEventListener("submit", guardarEdicion);
     document.getElementById("btn-cancelar-edicion").addEventListener("click", cerrarModalEditar);
     document.getElementById("btn-cancelar-exportar").addEventListener("click", cerrarModalExportar);
+    document.getElementById("btn-cancelar-eliminar").addEventListener("click", cerrarModalEliminar);
+    document.getElementById("btn-confirmar-eliminar").addEventListener("click", confirmarEliminar);
     document.getElementById("btn-export-pdf").addEventListener("click", exportarTodasPDF);
     document.getElementById("btn-export-excel").addEventListener("click", exportarTodasExcel);
 
-    // Botones de formato en el modal de exportar
     document.querySelectorAll(".btn-export-opcion").forEach(btn => {
         btn.addEventListener("click", () => exportarTareaEnFormato(btn.dataset.formato));
     });
 
+    // Cerrar modal de eliminar al hacer clic fuera
+    const modalEliminar = document.getElementById("modal-eliminar");
+    modalEliminar.addEventListener("click", (e) => {
+        if (e.target === modalEliminar) cerrarModalEliminar();
+    });
+
+    // Cerrar modales con Escape
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            if (!modalEliminar.classList.contains("hidden")) cerrarModalEliminar();
+            if (!document.getElementById("modal-exportar").classList.contains("hidden")) cerrarModalExportar();
+        }
+    });
+
     configurarFiltros();
 }
+
 // ====================================================
 // UTILIDADES
 // ====================================================
