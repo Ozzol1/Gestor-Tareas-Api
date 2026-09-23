@@ -14,25 +14,25 @@ API REST para el gestor de tareas con autenticación JWT, integrada con el CRM i
 
 ## 🌐 URL Pública (Producción)
 
-**API desplegada en Render:** `https://gestor-tareas-api-7efn.onrender.com`
+**API desplegada en Render:** `https://TU-URL-REAL.onrender.com`
 
 > ⚠️ **Nota:** El servicio gratuito de Render duerme tras 15 minutos de inactividad. La primera petición tarda 30-50 segundos en responder.
 
 ### Ejemplos con la URL pública
 
     # Health check
-    curl https://gestor-tareas-api-7efn.onrender.com/health
+    curl https://TU-URL-REAL.onrender.com/health
 
     # Ping
-    curl hhttps://gestor-tareas-api-7efn.onrender.com/ping
+    curl https://TU-URL-REAL.onrender.com/ping
 
     # Registro
-    curl -X POST https://gestor-tareas-api-7efn.onrender.com/auth/registro \
+    curl -X POST https://TU-URL-REAL.onrender.com/auth/registro \
       -H "Content-Type: application/json" \
       -d "{\"email\":\"khale@example.com\",\"password\":\"secreto123\"}"
 
     # Login
-    curl -X POST https://gestor-tareas-api-7efn.onrender.com/auth/login \
+    curl -X POST https://TU-URL-REAL.onrender.com/auth/login \
       -H "Content-Type: application/json" \
       -d "{\"email\":\"khale@example.com\",\"password\":\"secreto123\"}"
 
