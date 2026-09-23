@@ -6,16 +6,98 @@
     <title>Dashboard - Gestor de Tareas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <div class="container">
-        <header>
+<body class="dashboard-body">
+    <div class="dashboard-container">
+        <header class="dashboard-header">
             <h1>📋 Mis Tareas</h1>
-            <button id="btn-logout">Cerrar sesión</button>
+            <div class="header-actions">
+                <span id="user-email" class="user-email"></span>
+                <button id="btn-logout" class="btn-logout">Cerrar sesión</button>
+            </div>
         </header>
 
         <div id="mensaje-error" class="error hidden"></div>
+        <div id="mensaje-exito" class="exito hidden"></div>
 
-        <p>Dashboard en construcción... 🚧</p>
+        <!-- Formulario de nueva tarea -->
+        <section class="nueva-tarea">
+            <h2>➕ Nueva Tarea</h2>
+            <form id="form-nueva-tarea">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="titulo">Título:</label>
+                        <input type="text" id="titulo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prioridad">Prioridad:</label>
+                        <select id="prioridad">
+                            <option value="baja">🟢 Baja</option>
+                            <option value="media" selected>🟡 Media</option>
+                            <option value="alta">🔴 Alta</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha_limite">Fecha límite:</label>
+                        <input type="date" id="fecha_limite">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="descripcion">Descripción (opcional):</label>
+                    <textarea id="descripcion" rows="2"></textarea>
+                </div>
+
+                <button type="submit">Crear Tarea</button>
+            </form>
+        </section>
+
+        <!-- Filtros -->
+        <section class="filtros">
+            <button class="filtro-btn active" data-filtro="todas">Todas</button>
+            <button class="filtro-btn" data-filtro="pendientes">⏳ Pendientes</button>
+            <button class="filtro-btn" data-filtro="completadas">✅ Completadas</button>
+        </section>
+
+        <!-- Lista de tareas -->
+        <section id="lista-tareas" class="lista-tareas">
+            <div class="loading">Cargando tareas...</div>
+        </section>
+    </div>
+
+    <!-- Modal de edición -->
+    <div id="modal-editar" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Tarea</h2>
+            <form id="form-editar">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label for="edit-titulo">Título:</label>
+                    <input type="text" id="edit-titulo" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-descripcion">Descripción:</label>
+                    <textarea id="edit-descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-prioridad">Prioridad:</label>
+                        <select id="edit-prioridad">
+                            <option value="baja">🟢 Baja</option>
+                            <option value="media">🟡 Media</option>
+                            <option value="alta">🔴 Alta</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-fecha_limite">Fecha límite:</label>
+                        <input type="date" id="edit-fecha_limite">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="btn-cancelar-edicion" class="btn-secondary">Cancelar</button>
+                    <button type="submit" id="btn-guardar-edicion">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
