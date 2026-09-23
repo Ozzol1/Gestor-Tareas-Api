@@ -1,4 +1,7 @@
-* {
+/* ====================================================
+   RESET Y BASE
+   ==================================================== */
+   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -38,6 +41,9 @@ h2 {
     font-weight: normal;
 }
 
+/* ====================================================
+   FORMULARIOS
+   ==================================================== */
 .form-group {
     margin-bottom: 20px;
 }
@@ -63,6 +69,36 @@ input:focus {
     border-color: #3498db;
 }
 
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1em;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1em;
+    background: white;
+    cursor: pointer;
+}
+
+select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
 button {
     width: 100%;
     padding: 12px;
@@ -80,18 +116,57 @@ button:hover {
     background: #2980b9;
 }
 
+/* ====================================================
+   UTILIDADES
+   ==================================================== */
 .error {
     background: #fdecea;
-    color: #e74c3c;
-    padding: 12px;
+    color: #c0392b;
+    border-left: 4px solid #e74c3c;
+    padding: 14px 16px;
     border-radius: 8px;
     margin-top: 15px;
-    font-size: 0.9em;
-    text-align: center;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    text-align: left;
+    line-height: 1.4;
+    animation: shake 0.4s ease-in-out;
 }
 
+.exito {
+    background: #eafaf1;
+    color: #27ae60;
+    border-left: 4px solid #2ecc71;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    text-align: left;
+    line-height: 1.4;
+    animation: slideIn 0.3s ease-out;
+    font-weight: 500;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 p {
@@ -108,4 +183,287 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+/* ====================================================
+   DASHBOARD
+   ==================================================== */
+.dashboard-body {
+    align-items: flex-start;
+    padding: 20px;
+}
+
+.dashboard-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 900px;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-header h1 {
+    text-align: left;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-email {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.btn-logout {
+    width: auto;
+    padding: 8px 16px;
+    background: #e74c3c;
+    font-size: 0.9em;
+}
+
+.btn-logout:hover {
+    background: #c0392b;
+}
+
+/* Nueva tarea */
+.nueva-tarea {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.nueva-tarea h2 {
+    text-align: left;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+}
+
+/* Filtros */
+.filtros {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filtro-btn {
+    width: auto;
+    padding: 8px 16px;
+    background: #ecf0f1;
+    color: #2c3e50;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+.filtro-btn:hover {
+    background: #d5dbdb;
+}
+
+.filtro-btn.active {
+    background: #3498db;
+    color: white;
+}
+
+/* Lista de tareas */
+.lista-tareas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.loading, .empty-state {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 30px;
+    font-style: italic;
+}
+
+.tarea-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 5px solid #95a5a6;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tarea-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.tarea-card.prioridad-alta { border-left-color: #e74c3c; }
+.tarea-card.prioridad-media { border-left-color: #f39c12; }
+.tarea-card.prioridad-baja { border-left-color: #2ecc71; }
+
+.tarea-card.completada {
+    opacity: 0.6;
+    background: #ecf0f1;
+}
+
+.tarea-card.completada h3 {
+    text-decoration: line-through;
+    color: #7f8c8d;
+}
+
+.tarea-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.tarea-header h3 {
+    color: #2c3e50;
+    font-size: 1.1em;
+    text-align: left;
+    margin: 0;
+    flex: 1;
+}
+
+.badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: white;
+}
+
+.badge-alta { background: #e74c3c; }
+.badge-media { background: #f39c12; }
+.badge-baja { background: #2ecc71; }
+
+.tarea-desc {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+.tarea-fecha {
+    color: #95a5a6;
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.tarea-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.tarea-actions button {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    background: #3498db;
+}
+
+.tarea-actions .btn-toggle { background: #2ecc71; }
+.tarea-actions .btn-toggle:hover { background: #27ae60; }
+.tarea-actions .btn-edit { background: #f39c12; }
+.tarea-actions .btn-edit:hover { background: #e67e22; }
+.tarea-actions .btn-delete { background: #e74c3c; }
+.tarea-actions .btn-delete:hover { background: #c0392b; }
+
+/* ====================================================
+   MODAL
+   ==================================================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal.hidden {
+    display: none !important;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    width: auto;
+    padding: 10px 20px;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+/* ====================================================
+   RESPONSIVE
+   ==================================================== */
+@media (max-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tarea-actions button {
+        font-size: 0.8em;
+        padding: 5px 8px;
+    }
 }
