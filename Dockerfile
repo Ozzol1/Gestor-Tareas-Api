@@ -27,9 +27,9 @@ COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 
 COPY --chown=appuser:appuser . .
 
+# ⚠️ Dar permisos ANTES de cambiar a usuario no-root
+RUN chmod +x entrypoint.sh
+
 USER appuser
 
-EXPOSE 5000
-
-# Shell form para permitir expansión de variables de entorno
-CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 60 "app:create_app()"
+CMD ["./entrypoint.sh"]
