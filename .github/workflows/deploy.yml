@@ -1,13 +1,11 @@
 name: Deploy
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:  # Solo se ejecuta manualmente desde GitHub
 
 jobs:
-  deploy:
+  placeholder:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render deploy
-        run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+      - name: Info
+        run: echo "Render hace auto-deploy al hacer push. Este workflow no es necesario."
