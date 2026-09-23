@@ -98,7 +98,7 @@ La API corre en `http://localhost:5000`.
 |--------|------|-------------|
 | GET | `/tareas` | Listar tareas propias. Filtro: `?completada=true/false` |
 | GET | `/tareas/<id>` | Obtener una tarea propia |
-| POST | `/tareas/<id>` | Crear tarea |
+| POST | `/tareas/` | Crear tarea |
 | PATCH | `/tareas/<id>` | Actualizar tarea propia |
 | DELETE | `/tareas/<id>` | Eliminar tarea propia |
 
