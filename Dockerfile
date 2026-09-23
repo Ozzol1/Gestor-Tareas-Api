@@ -27,9 +27,11 @@ COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 
 COPY --chown=appuser:appuser . .
 
-# ⚠️ Dar permisos ANTES de cambiar a usuario no-root
+# Dar permisos de ejecución al entrypoint antes de cambiar de usuario
 RUN chmod +x entrypoint.sh
 
 USER appuser
+
+EXPOSE 5000
 
 CMD ["./entrypoint.sh"]
