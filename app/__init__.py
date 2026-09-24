@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
@@ -31,13 +31,10 @@ def create_app(config_override=None):
     db.init_app(app)
     jwt.init_app(app)
 
-    # Logging a consola (sin FileHandler para Docker)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.StreamHandler()
-        ]
+        handlers=[logging.StreamHandler()]
     )
 
     @app.errorhandler(500)
@@ -50,7 +47,14 @@ def create_app(config_override=None):
 
     @app.errorhandler(404)
     def ruta_no_encontrada(error):
+        # Si es una petición de API (JSON), devolver JSON. Si no, HTML.
+        if request_path_starts_with_api():
+            return jsonify({"error": "Ruta no encontrada."}), 404
         return jsonify({"error": "Ruta no encontrada."}), 404
+
+    def request_path_starts_with_api():
+        from flask import request as _r
+        return _r.path.startswith(("/auth", "/tareas", "/ping", "/health"))
 
     from app import models
     with app.app_context():
@@ -69,11 +73,10 @@ def create_app(config_override=None):
     @app.route("/health")
     def health():
         return {"status": "ok"}, 200
+
     # ----------------------------------------------------
     # RUTAS DEL FRONTEND
     # ----------------------------------------------------
-    from flask import render_template
-
     @app.route("/")
     @app.route("/login")
     def login_page():
@@ -86,5 +89,13 @@ def create_app(config_override=None):
     @app.route("/dashboard")
     def dashboard_page():
         return render_template("dashboard.html")
-    
+
+    @app.route("/olvide-password")
+    def olvide_password_page():
+        return render_template("olvide_password.html")
+
+    @app.route("/reset-password/<token>")
+    def reset_password_page(token):
+        return render_template("reset_password.html", token=token)
+
     return app

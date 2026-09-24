@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Gestor de Tareas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
@@ -12,6 +13,9 @@
             <h1>📋 Mis Tareas</h1>
             <div class="header-actions">
                 <span id="user-email" class="user-email"></span>
+                <button class="theme-toggle" aria-label="Cambiar tema">
+                    <span class="icono-tema">🌙</span>
+                </button>
                 <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
                     <span class="icono-logout">🚪</span>
                     <span>Salir</span>
@@ -21,6 +25,38 @@
 
         <div id="mensaje-error" class="error hidden"></div>
         <div id="mensaje-exito" class="exito hidden"></div>
+
+        <!-- Estadísticas -->
+        <section class="estadisticas">
+            <div class="stat-card stat-total">
+                <div class="stat-icono">📋</div>
+                <div class="stat-info">
+                    <span class="stat-numero" id="stat-total">0</span>
+                    <span class="stat-label">Total</span>
+                </div>
+            </div>
+            <div class="stat-card stat-pendientes">
+                <div class="stat-icono">⏳</div>
+                <div class="stat-info">
+                    <span class="stat-numero" id="stat-pendientes">0</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
+            </div>
+            <div class="stat-card stat-completadas">
+                <div class="stat-icono">✅</div>
+                <div class="stat-info">
+                    <span class="stat-numero" id="stat-completadas">0</span>
+                    <span class="stat-label">Completadas</span>
+                </div>
+            </div>
+            <div class="stat-card stat-vencidas">
+                <div class="stat-icono">⚠️</div>
+                <div class="stat-info">
+                    <span class="stat-numero" id="stat-vencidas">0</span>
+                    <span class="stat-label">Vencidas</span>
+                </div>
+            </div>
+        </section>
 
         <!-- Formulario de nueva tarea -->
         <section class="nueva-tarea">
@@ -54,7 +90,31 @@
             </form>
         </section>
 
-        <!-- Filtros y exportación -->
+        <!-- Barra de búsqueda y filtros -->
+        <section class="barra-filtros">
+            <div class="busqueda-container">
+                <span class="busqueda-icono">🔍</span>
+                <input
+                    type="text"
+                    id="buscador"
+                    class="buscador"
+                    placeholder="Buscar por título o descripción..."
+                    autocomplete="off"
+                >
+                <button id="btn-limpiar-busqueda" class="btn-limpiar-busqueda hidden" title="Limpiar búsqueda">×</button>
+            </div>
+            <div class="filtro-prioridad">
+                <label for="filtro-prioridad">Prioridad:</label>
+                <select id="filtro-prioridad">
+                    <option value="todas">Todas</option>
+                    <option value="alta">🔴 Alta</option>
+                    <option value="media">🟡 Media</option>
+                    <option value="baja">🟢 Baja</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Filtros de estado y exportación -->
         <section class="filtros">
             <div class="filtros-grupo">
                 <button class="filtro-btn active" data-filtro="todas">Todas</button>
@@ -63,18 +123,19 @@
             </div>
             <div class="exportar-grupo">
                 <button id="btn-export-pdf" class="btn-export btn-export-pdf" title="Descargar todas las tareas en PDF">
-                    📄 Exportar PDF
+                    📄 PDF
                 </button>
                 <button id="btn-export-excel" class="btn-export btn-export-excel" title="Descargar todas las tareas en Excel">
-                    📊 Exportar Excel
+                    📊 Excel
                 </button>
             </div>
         </section>
 
+        <!-- Contador de resultados -->
+        <div id="contador-resultados" class="contador-resultados hidden"></div>
+
         <!-- Lista de tareas -->
-        <section id="lista-tareas" class="lista-tareas">
-            <!-- Aquí se renderizan las tareas, skeletons, o empty state -->
-        </section>
+        <section id="lista-tareas" class="lista-tareas"></section>
     </div>
 
     <!-- Modal de edición -->
@@ -170,7 +231,7 @@
         </div>
     </div>
 
-    <!-- Contenedor de toasts (notificaciones flotantes) -->
+    <!-- Contenedor de toasts -->
     <div id="toast-container" aria-live="polite"></div>
 
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>

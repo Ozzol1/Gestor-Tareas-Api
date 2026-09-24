@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Gestor de Tareas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 <body>
+    <button class="theme-toggle theme-toggle-flotante" aria-label="Cambiar tema">
+        <span class="icono-tema">🌙</span>
+    </button>
+
     <div class="container">
         <h1>🚀 Gestor de Tareas</h1>
         <h2>Iniciar sesión</h2>
@@ -27,6 +32,9 @@
 
         <div id="mensaje-error" class="error hidden"></div>
 
+        <p class="link-olvide">
+            <a href="/olvide-password">¿Olvidaste tu contraseña?</a>
+        </p>
         <p>¿No tienes cuenta? <a href="/registro">Regístrate</a></p>
     </div>
 

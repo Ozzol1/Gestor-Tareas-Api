@@ -172,3 +172,32 @@ function mostrarToast(mensaje, tipo = "success", duracion = 3500) {
         if (e.target.classList.contains("toast-cerrar")) clearTimeout(timer);
     });
 }
+
+function forzarCentradoModal(idModal) {
+    const modal = document.getElementById(idModal);
+    if (!modal) return;
+
+    modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0,0,0,0.55) !important;
+        display: block !important;
+        z-index: 9999 !important;
+    `;
+
+    const contenido = modal.querySelector(".modal-content");
+    if (contenido) {
+        contenido.style.cssText = `
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            max-width: 500px !important;
+            width: calc(100% - 40px) !important;
+            margin: 0 !important;
+        `;
+    }
+}

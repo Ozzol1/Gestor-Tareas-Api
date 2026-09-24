@@ -16,15 +16,16 @@ class Usuario(db.Model):
         nullable=False
     )
 
-    # Relación: un usuario tiene muchas tareas
+    # Recuperación de contraseña
+    reset_token = db.Column(db.String(100), nullable=True, index=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
+
     tareas = db.relationship("Tarea", backref="usuario", lazy=True)
 
     def set_password(self, password):
-        """Hashea y guarda la contraseña."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Verifica si la contraseña coincide con el hash."""
         return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
@@ -52,8 +53,6 @@ class Tarea(db.Model):
         default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
-
-    # Cada tarea pertenece obligatoriamente a un usuario
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
 
     def to_dict(self):

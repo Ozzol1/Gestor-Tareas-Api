@@ -2,7 +2,9 @@
 // ESTADO GLOBAL
 // ====================================================
 let tareas = [];
-let filtroActual = "todas";
+let filtroEstado = "todas";
+let filtroPrioridad = "todas";
+let busquedaActual = "";
 let tareaEditandoId = null;
 let tareaExportandoId = null;
 let tareaEliminandoId = null;
@@ -33,7 +35,7 @@ async function cargarPerfil() {
 }
 
 // ====================================================
-// CARGAR TAREAS (CON SKELETON LOADER)
+// CARGAR TAREAS
 // ====================================================
 async function cargarTareas() {
     const lista = document.getElementById("lista-tareas");
@@ -70,20 +72,97 @@ function renderizarSkeletons() {
 }
 
 // ====================================================
-// RENDERIZAR TAREAS
+// ACTUALIZAR ESTADÍSTICAS
+// ====================================================
+function actualizarEstadisticas() {
+    const total = tareas.length;
+    const completadas = tareas.filter(t => t.completada).length;
+    const pendientes = total - completadas;
+    const vencidas = tareas.filter(t => estaVencida(t)).length;
+
+    animarNumero("stat-total", total);
+    animarNumero("stat-pendientes", pendientes);
+    animarNumero("stat-completadas", completadas);
+    animarNumero("stat-vencidas", vencidas);
+}
+
+function animarNumero(idElemento, valorFinal) {
+    const el = document.getElementById(idElemento);
+    if (!el) return;
+
+    const valorActual = parseInt(el.textContent) || 0;
+    if (valorActual === valorFinal) return;
+
+    const duracion = 400;
+    const pasos = 20;
+    const incremento = (valorFinal - valorActual) / pasos;
+    let paso = 0;
+
+    const timer = setInterval(() => {
+        paso++;
+        el.textContent = Math.round(valorActual + incremento * paso);
+        if (paso >= pasos) {
+            el.textContent = valorFinal;
+            clearInterval(timer);
+        }
+    }, duracion / pasos);
+}
+
+function estaVencida(tarea) {
+    if (!tarea.fecha_limite || tarea.completada) return false;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fecha = new Date(tarea.fecha_limite + "T00:00:00");
+    return fecha < hoy;
+}
+
+// ====================================================
+// APLICAR FILTROS
+// ====================================================
+function tareasFiltradas() {
+    return tareas.filter(t => {
+        // Filtro por estado
+        if (filtroEstado === "pendientes" && t.completada) return false;
+        if (filtroEstado === "completadas" && !t.completada) return false;
+
+        // Filtro por prioridad
+        if (filtroPrioridad !== "todas" && t.prioridad !== filtroPrioridad) return false;
+
+        // Búsqueda (título o descripción)
+        if (busquedaActual) {
+            const q = busquedaActual.toLowerCase();
+            const titulo = (t.titulo || "").toLowerCase();
+            const desc = (t.descripcion || "").toLowerCase();
+            if (!titulo.includes(q) && !desc.includes(q)) return false;
+        }
+
+        return true;
+    });
+}
+
+function hayFiltrosActivos() {
+    return filtroEstado !== "todas" ||
+           filtroPrioridad !== "todas" ||
+           busquedaActual !== "";
+}
+
+// ====================================================
+// RENDERIZAR
 // ====================================================
 function renderizarTareas() {
     const lista = document.getElementById("lista-tareas");
+    const filtradas = tareasFiltradas();
 
-    let filtradas = tareas;
-    if (filtroActual === "pendientes") {
-        filtradas = tareas.filter(t => !t.completada);
-    } else if (filtroActual === "completadas") {
-        filtradas = tareas.filter(t => t.completada);
+    actualizarEstadisticas();
+    actualizarContadorResultados(filtradas.length);
+
+    if (tareas.length === 0) {
+        lista.innerHTML = renderizarEmptyStateGeneral();
+        return;
     }
 
     if (filtradas.length === 0) {
-        lista.innerHTML = renderizarEmptyState();
+        lista.innerHTML = renderizarEmptyStateFiltros();
         return;
     }
 
@@ -91,27 +170,33 @@ function renderizarTareas() {
         const clases = ["tarea-card"];
         if (t.completada) clases.push("completada");
         clases.push(`prioridad-${t.prioridad}`);
+        if (estaVencida(t)) clases.push("vencida");
+
+        const fechaTexto = t.fecha_limite
+            ? (estaVencida(t) ? `📅 ${t.fecha_limite} (vencida)` : `📅 ${t.fecha_limite}`)
+            : "";
 
         return `
-            <div class="${clases.join(' ')}" style="animation-delay: ${i * 0.05}s">
+            <div class="${clases.join(' ')}" style="animation-delay: ${i * 0.04}s">
                 <div class="tarea-header">
                     <h3>${escapeHtml(t.titulo)}</h3>
                     <span class="badge badge-${t.prioridad}">${t.prioridad}</span>
                 </div>
                 ${t.descripcion ? `<p class="tarea-desc">${escapeHtml(t.descripcion)}</p>` : ""}
-                ${t.fecha_limite ? `<p class="tarea-fecha">📅 ${t.fecha_limite}</p>` : ""}
+                ${fechaTexto ? `<p class="tarea-fecha">${fechaTexto}</p>` : ""}
                 <div class="tarea-actions">
                     <button class="btn-toggle" data-id="${t.id}">
                         ${t.completada ? "↩️ Reabrir" : "✅ Completar"}
                     </button>
                     <button class="btn-edit" data-id="${t.id}">✏️ Editar</button>
-                    <button class="btn-export-tarea" data-id="${t.id}" title="Exportar esta tarea">📥 Exportar</button>
-                    <button class="btn-delete" data-id="${t.id}">🗑️ Eliminar</button>
+                    <button class="btn-export-tarea" data-id="${t.id}" title="Exportar esta tarea">📥</button>
+                    <button class="btn-delete" data-id="${t.id}">🗑️</button>
                 </div>
             </div>
         `;
     }).join("");
 
+    // Eventos
     lista.querySelectorAll(".btn-toggle").forEach(btn => {
         btn.addEventListener("click", () => toggleCompletada(parseInt(btn.dataset.id)));
     });
@@ -126,38 +211,57 @@ function renderizarTareas() {
     });
 }
 
-function renderizarEmptyState() {
-    const mensajes = {
-        todas: {
-            icono: "📝",
-            titulo: "No hay tareas todavía",
-            texto: "Crea tu primera tarea usando el formulario de arriba."
-        },
-        pendientes: {
-            icono: "🎉",
-            titulo: "¡Todo hecho!",
-            texto: "No tienes tareas pendientes. ¡Buen trabajo!"
-        },
-        completadas: {
-            icono: "🎯",
-            titulo: "Aún no has completado tareas",
-            texto: "Marca tus tareas como completadas para verlas aquí."
-        }
+function actualizarContadorResultados(cantidad) {
+    const el = document.getElementById("contador-resultados");
+    if (!el) return;
+
+    if (!hayFiltrosActivos()) {
+        el.classList.add("hidden");
+        return;
+    }
+
+    el.classList.remove("hidden");
+    el.textContent = `🔎 Mostrando ${cantidad} de ${tareas.length} tarea(s)`;
+}
+
+function renderizarEmptyStateGeneral() {
+    return `
+        <div class="empty-state-container">
+            <div class="empty-state-icono">📝</div>
+            <h3 class="empty-state-titulo">No hay tareas todavía</h3>
+            <p class="empty-state-texto">Crea tu primera tarea usando el formulario de arriba.</p>
+        </div>
+    `;
+}
+
+function renderizarEmptyStateFiltros() {
+    const iconos = {
+        todas: "🔍",
+        pendientes: "🎉",
+        completadas: "🎯"
     };
 
-    const m = mensajes[filtroActual] || mensajes.todas;
+    let texto = "No hay tareas que coincidan con tu búsqueda o filtros.";
+    if (filtroEstado === "pendientes" && !busquedaActual && filtroPrioridad === "todas") {
+        texto = "No tienes tareas pendientes. ¡Buen trabajo!";
+    } else if (filtroEstado === "completadas" && !busquedaActual && filtroPrioridad === "todas") {
+        texto = "Aún no has completado tareas.";
+    }
 
     return `
         <div class="empty-state-container">
-            <div class="empty-state-icono">${m.icono}</div>
-            <h3 class="empty-state-titulo">${m.titulo}</h3>
-            <p class="empty-state-texto">${m.texto}</p>
+            <div class="empty-state-icono">${iconos[filtroEstado] || "🔍"}</div>
+            <h3 class="empty-state-titulo">Sin resultados</h3>
+            <p class="empty-state-texto">${texto}</p>
+            <button id="btn-limpiar-todo" class="btn-secondary" style="margin-top: 15px; width: auto; padding: 8px 20px;">
+                Limpiar filtros
+            </button>
         </div>
     `;
 }
 
 // ====================================================
-// DESCARGAR ARCHIVOS (con token JWT)
+// DESCARGAR ARCHIVOS
 // ====================================================
 async function descargarArchivo(endpoint, nombreSugerido) {
     const token = localStorage.getItem("access_token");
@@ -206,7 +310,7 @@ function exportarTodasExcel() {
 }
 
 // ====================================================
-// EXPORTAR TAREA INDIVIDUAL (MODAL)
+// EXPORTAR TAREA INDIVIDUAL
 // ====================================================
 function mostrarMenuExportar(id) {
     const tarea = tareas.find(t => t.id === id);
@@ -404,17 +508,87 @@ async function confirmarEliminar() {
 }
 
 // ====================================================
-// FILTROS
+// FILTROS Y BÚSQUEDA
 // ====================================================
 function configurarFiltros() {
+    // Filtros de estado
     document.querySelectorAll(".filtro-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            filtroActual = btn.dataset.filtro;
+            filtroEstado = btn.dataset.filtro;
             renderizarTareas();
         });
     });
+
+    // Filtro de prioridad
+    const selectPrioridad = document.getElementById("filtro-prioridad");
+    selectPrioridad.addEventListener("change", () => {
+        filtroPrioridad = selectPrioridad.value;
+        renderizarTareas();
+    });
+
+    // Buscador con debounce
+    const buscador = document.getElementById("buscador");
+    const btnLimpiar = document.getElementById("btn-limpiar-busqueda");
+    let timeoutBusqueda = null;
+
+    buscador.addEventListener("input", (e) => {
+        const valor = e.target.value;
+
+        // Mostrar/ocultar botón de limpiar
+        if (valor) {
+            btnLimpiar.classList.remove("hidden");
+        } else {
+            btnLimpiar.classList.add("hidden");
+        }
+
+        // Debounce: esperar 200ms tras el último tecleo
+        clearTimeout(timeoutBusqueda);
+        timeoutBusqueda = setTimeout(() => {
+            busquedaActual = valor.trim();
+            renderizarTareas();
+        }, 200);
+    });
+
+    // Botón limpiar búsqueda
+    btnLimpiar.addEventListener("click", () => {
+        buscador.value = "";
+        busquedaActual = "";
+        btnLimpiar.classList.add("hidden");
+        renderizarTareas();
+        buscador.focus();
+    });
+
+    // Atajo: "/" enfoca el buscador
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+            e.preventDefault();
+            buscador.focus();
+        }
+    });
+
+    // Botón de limpiar todo (dentro del empty state)
+    document.addEventListener("click", (e) => {
+        if (e.target.id === "btn-limpiar-todo") {
+            limpiarTodosFiltros();
+        }
+    });
+}
+
+function limpiarTodosFiltros() {
+    filtroEstado = "todas";
+    filtroPrioridad = "todas";
+    busquedaActual = "";
+
+    document.getElementById("buscador").value = "";
+    document.getElementById("btn-limpiar-busqueda").classList.add("hidden");
+    document.getElementById("filtro-prioridad").value = "todas";
+
+    document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("active"));
+    document.querySelector('.filtro-btn[data-filtro="todas"]').classList.add("active");
+
+    renderizarTareas();
 }
 
 // ====================================================
@@ -434,13 +608,11 @@ function configurarEventos() {
         btn.addEventListener("click", () => exportarTareaEnFormato(btn.dataset.formato));
     });
 
-    // Cerrar modal de eliminar al hacer clic fuera
     const modalEliminar = document.getElementById("modal-eliminar");
     modalEliminar.addEventListener("click", (e) => {
         if (e.target === modalEliminar) cerrarModalEliminar();
     });
 
-    // Cerrar modales con Escape
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             if (!modalEliminar.classList.contains("hidden")) cerrarModalEliminar();
