@@ -366,15 +366,20 @@ async function crearTarea(e) {
     const boton = document.querySelector("#form-nueva-tarea button[type='submit']");
     boton.disabled = true;
     boton.innerHTML = '<span class="spinner"></span>Creando...';
-
-    const { ok, data } = await apiFetch("/tareas", {
-        method: "POST",
-        body: JSON.stringify({ titulo, descripcion, prioridad, fecha_limite }),
-    });
-
+    
+    const [respuesta] = await Promise.all([
+        apiFetch("/tareas", {
+            method: "POST",
+            body: JSON.stringify({ titulo, descripcion, prioridad, fecha_limite }),
+        }),
+        new Promise(resolve => setTimeout(resolve, 500))
+    ]);
+    
+    const { ok, data } = respuesta;
+    
     boton.disabled = false;
     boton.textContent = "Crear Tarea";
-
+    
     if (ok) {
         document.getElementById("form-nueva-tarea").reset();
         tareas.push(data);

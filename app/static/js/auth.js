@@ -36,13 +36,19 @@ if (loginForm) {
         const textoOriginal = boton.textContent;
         boton.disabled = true;
         boton.innerHTML = '<span class="spinner"></span>Iniciando sesión...';
-
-        const { ok, data } = await apiFetch("/auth/login", {
-            method: "POST",
-            body: JSON.stringify({ email, password }),
-            skipAuthRedirect: true,
-        });
-
+        
+        // Ejecutar la petición Y un mínimo de 500ms en paralelo
+        const [respuesta] = await Promise.all([
+            apiFetch("/auth/login", {
+                method: "POST",
+                body: JSON.stringify({ email, password }),
+                skipAuthRedirect: true,
+            }),
+            new Promise(resolve => setTimeout(resolve, 500)) // mínimo 500ms de spinner
+        ]);
+        
+        const { ok, data } = respuesta;
+        
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
@@ -111,13 +117,18 @@ if (registroForm) {
         const textoOriginal = boton.textContent;
         boton.disabled = true;
         boton.innerHTML = '<span class="spinner"></span>Creando cuenta...';
-
-        const { ok, data } = await apiFetch("/auth/registro", {
-            method: "POST",
-            body: JSON.stringify({ email, password }),
-            skipAuthRedirect: true,
-        });
-
+        
+        const [respuesta] = await Promise.all([
+            apiFetch("/auth/registro", {
+                method: "POST",
+                body: JSON.stringify({ email, password }),
+                skipAuthRedirect: true,
+            }),
+            new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+        
+        const { ok, data } = respuesta;
+        
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
