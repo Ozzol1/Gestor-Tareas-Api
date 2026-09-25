@@ -1975,3 +1975,149 @@ html[data-theme="dark"] .exito-nota {
     margin-right: auto !important;
     text-align: center !important;
 }
+
+/* ====================================================
+   LOADING SPINNER (dentro de botones)
+   ==================================================== */
+   button .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* El botón cuando está deshabilitado no debe cambiar de tamaño */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+/* Para el caso de botones con spinner, mantener alineación */
+button:has(.spinner) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* ====================================================
+   PÁGINA 404
+   ==================================================== */
+   .container-404 {
+    max-width: 520px;
+    text-align: center;
+    padding: 50px 40px;
+}
+
+.error-404-icono {
+    font-size: 5em;
+    margin-bottom: 15px;
+    animation: floatEmpty 3s ease-in-out infinite;
+    display: inline-block;
+}
+
+.error-404-titulo {
+    font-size: 5em;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.error-404-subtitulo {
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 600;
+    margin: 15px 0 10px 0;
+}
+
+.error-404-texto {
+    color: #7f8c8d;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.error-404-acciones {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-404 {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.btn-404-primary {
+    background: #3498db;
+    color: white !important;
+}
+
+.btn-404-primary:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.35);
+}
+
+.btn-404-secondary {
+    background: #ecf0f1;
+    color: #2c3e50 !important;
+}
+
+.btn-404-secondary:hover {
+    background: #d5dbdb;
+    transform: translateY(-2px);
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .error-404-subtitulo {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .error-404-texto {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .btn-404-secondary {
+    background: var(--bg-alt);
+    color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] .btn-404-secondary:hover {
+    background: var(--bg-hover);
+}
+
+@media (max-width: 500px) {
+    .container-404 {
+        padding: 40px 25px;
+    }
+    .error-404-titulo {
+        font-size: 3.5em;
+    }
+    .error-404-acciones {
+        flex-direction: column;
+    }
+    .btn-404 {
+        width: 100%;
+    }
+}

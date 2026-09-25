@@ -47,10 +47,12 @@ def create_app(config_override=None):
 
     @app.errorhandler(404)
     def ruta_no_encontrada(error):
-        # Si es una petición de API (JSON), devolver JSON. Si no, HTML.
-        if request_path_starts_with_api():
+        from flask import request as _r
+        # Si es una petición de API (JSON), devolver JSON
+        if _r.path.startswith(("/auth", "/tareas", "/ping", "/health")):
             return jsonify({"error": "Ruta no encontrada."}), 404
-        return jsonify({"error": "Ruta no encontrada."}), 404
+        # Si es una página del frontend, mostrar 404.html
+        return render_template("404.html"), 404
 
     def request_path_starts_with_api():
         from flask import request as _r

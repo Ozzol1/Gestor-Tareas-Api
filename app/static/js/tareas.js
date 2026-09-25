@@ -365,7 +365,7 @@ async function crearTarea(e) {
 
     const boton = document.querySelector("#form-nueva-tarea button[type='submit']");
     boton.disabled = true;
-    boton.textContent = "Creando...";
+    boton.innerHTML = '<span class="spinner"></span>Creando...';
 
     const { ok, data } = await apiFetch("/tareas", {
         method: "POST",
@@ -450,8 +450,7 @@ async function guardarEdicion(e) {
 
     const boton = document.getElementById("btn-guardar-edicion");
     boton.disabled = true;
-    boton.textContent = "Guardando...";
-
+    boton.innerHTML = '<span class="spinner"></span>Guardando...';
     const { ok, data } = await apiFetch(`/tareas/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ titulo, descripcion, prioridad, fecha_limite }),

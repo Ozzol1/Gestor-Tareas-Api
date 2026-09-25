@@ -35,7 +35,7 @@ if (loginForm) {
         const boton = loginForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
-        boton.textContent = "Iniciando sesión...";
+        boton.innerHTML = '<span class="spinner"></span>Iniciando sesión...';
 
         const { ok, data } = await apiFetch("/auth/login", {
             method: "POST",
@@ -110,7 +110,7 @@ if (registroForm) {
         const boton = registroForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
-        boton.textContent = "Creando cuenta...";
+        boton.innerHTML = '<span class="spinner"></span>Creando cuenta...';
 
         const { ok, data } = await apiFetch("/auth/registro", {
             method: "POST",
@@ -122,7 +122,6 @@ if (registroForm) {
         boton.textContent = textoOriginal;
 
         if (ok) {
-            // Mostrar modal de éxito con animaciones
             mostrarModalExitoRegistro();
         } else {
             let mensaje = "❌ Error al crear la cuenta. Intenta de nuevo.";
@@ -150,7 +149,6 @@ if (registroForm) {
 function mostrarModalExitoRegistro() {
     const modal = document.getElementById("modal-exito-registro");
     if (!modal) {
-        // Fallback
         alert("¡Cuenta creada con éxito! Ahora inicia sesión.");
         window.location.href = "/login";
         return;
@@ -158,14 +156,13 @@ function mostrarModalExitoRegistro() {
 
     modal.classList.remove("hidden");
 
-    // Redirigir tras la animación (2.8s)
     setTimeout(() => {
         window.location.href = "/login";
     }, 2800);
 }
 
 // ====================================================
-// LOGOUT CON MODAL DE CONFIRMACIÓN
+// LOGOUT CON MODAL
 // ====================================================
 const btnLogout = document.getElementById("btn-logout");
 if (btnLogout) {
