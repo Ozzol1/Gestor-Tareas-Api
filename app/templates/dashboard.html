@@ -5,38 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Gestor de Tareas</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-        <!-- SEO -->
-        <meta name="description" content="Gestor de tareas con API REST, autenticación JWT y frontend en vanilla JS. Producto interno de NovaTech.">
-        <meta name="author" content="Khale Rodríguez - NovaTech">
-    
-        <!-- Open Graph (para WhatsApp, Twitter, LinkedIn) -->
-        <meta property="og:type" content="website">
-        <meta property="og:title" content="Gestor de Tareas - NovaTech">
-        <meta property="og:description" content="Organiza tus tareas con autenticación segura. Demo en vivo.">
-        <meta property="og:url" content="https://gestor-tareas-api-7efn.onrender.com">
-        <meta property="og:site_name" content="Gestor de Tareas">
-    
-        <!-- Twitter Card -->
-        <meta name="twitter:card" content="summary">
-        <meta name="twitter:title" content="Gestor de Tareas - NovaTech">
-        <meta name="twitter:description" content="Organiza tus tareas con autenticación segura.">
+    <meta name="description" content="Gestor de tareas con API REST, autenticación JWT y frontend en vanilla JS.">
+    <meta property="og:title" content="Gestor de Tareas - NovaTech">
+    <meta property="og:description" content="Organiza tus tareas con autenticación segura. Demo en vivo.">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
-        <header class="dashboard-header">
-            <h1>📋 Mis Tareas</h1>
-            <div class="header-actions">
-                <span id="user-email" class="user-email"></span>
-                <button class="theme-toggle" aria-label="Cambiar tema">
-                    <span class="icono-tema">🌙</span>
-                </button>
-                <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
-                    <span class="icono-logout">🚪</span>
-                    <span>Salir</span>
-                </button>
-            </div>
+        <div class="header-actions">
+            <span id="user-email" class="user-email"></span>
+            <button id="btn-papelera" class="btn-papelera" title="Ver papelera">
+                <span>🗑️</span>
+                <span class="btn-papelera-texto">Papelera</span>
+            </button>
+            <button class="theme-toggle" aria-label="Cambiar tema">
+                <span class="icono-tema">🌙</span>
+            </button>
+            <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
+                <span class="icono-logout">🚪</span>
+                <span>Salir</span>
+            </button>
+        </div>
         </header>
 
         <div id="mensaje-error" class="error hidden"></div>
@@ -78,7 +68,7 @@
         <section class="nueva-tarea">
             <h2>➕ Nueva Tarea</h2>
             <form id="form-nueva-tarea">
-                <div class="form-row">
+                <div class="form-row form-row-4">
                     <div class="form-group">
                         <label for="titulo">Título:</label>
                         <input type="text" id="titulo" required>
@@ -92,9 +82,26 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="categoria">Categoría:</label>
+                        <select id="categoria">
+                            <option value="Personal">📋 Personal</option>
+                            <option value="Trabajo">💼 Trabajo</option>
+                            <option value="Estudio">📚 Estudio</option>
+                            <option value="Compras">🛒 Compras</option>
+                            <option value="Salud">🏥 Salud</option>
+                            <option value="__custom__">✨ Personalizada...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="fecha_limite">Fecha límite:</label>
                         <input type="date" id="fecha_limite">
                     </div>
+                </div>
+
+                <!-- Campo oculto para categoría personalizada -->
+                <div class="form-group hidden" id="grupo-categoria-custom">
+                    <label for="categoria_custom">Escribe tu categoría personalizada:</label>
+                    <input type="text" id="categoria_custom" maxlength="50" placeholder="Ej: Proyecto Personal">
                 </div>
 
                 <div class="form-group">
@@ -114,7 +121,7 @@
                     type="text"
                     id="buscador"
                     class="buscador"
-                    placeholder="Buscar por título o descripción..."
+                    placeholder="Buscar por título, descripción o categoría..."
                     autocomplete="off"
                 >
                 <button id="btn-limpiar-busqueda" class="btn-limpiar-busqueda hidden" title="Limpiar búsqueda">×</button>
@@ -126,6 +133,17 @@
                     <option value="alta">🔴 Alta</option>
                     <option value="media">🟡 Media</option>
                     <option value="baja">🟢 Baja</option>
+                </select>
+            </div>
+            <div class="filtro-categoria">
+                <label for="filtro-categoria">Categoría:</label>
+                <select id="filtro-categoria">
+                    <option value="todas">Todas</option>
+                    <option value="Personal">📋 Personal</option>
+                    <option value="Trabajo">💼 Trabajo</option>
+                    <option value="Estudio">📚 Estudio</option>
+                    <option value="Compras">🛒 Compras</option>
+                    <option value="Salud">🏥 Salud</option>
                 </select>
             </div>
         </section>
@@ -168,7 +186,7 @@
                     <label for="edit-descripcion">Descripción:</label>
                     <textarea id="edit-descripcion" rows="3"></textarea>
                 </div>
-                <div class="form-row">
+                <div class="form-row form-row-4">
                     <div class="form-group">
                         <label for="edit-prioridad">Prioridad:</label>
                         <select id="edit-prioridad">
@@ -178,10 +196,27 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="edit-categoria">Categoría:</label>
+                        <select id="edit-categoria">
+                            <option value="Personal">📋 Personal</option>
+                            <option value="Trabajo">💼 Trabajo</option>
+                            <option value="Estudio">📚 Estudio</option>
+                            <option value="Compras">🛒 Compras</option>
+                            <option value="Salud">🏥 Salud</option>
+                            <option value="__custom__">✨ Personalizada...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="edit-fecha_limite">Fecha límite:</label>
                         <input type="date" id="edit-fecha_limite">
                     </div>
                 </div>
+
+                <div class="form-group hidden" id="grupo-edit-categoria-custom">
+                    <label for="edit-categoria_custom">Categoría personalizada:</label>
+                    <input type="text" id="edit-categoria_custom" maxlength="50" placeholder="Ej: Proyecto Personal">
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" id="btn-cancelar-edicion" class="btn-secondary">Cancelar</button>
                     <button type="submit" id="btn-guardar-edicion">Guardar</button>
@@ -218,7 +253,7 @@
         </div>
     </div>
 
-    <!-- Modal de confirmación de cerrar sesión -->
+    <!-- Modal de cerrar sesión -->
     <div id="modal-logout" class="modal hidden">
         <div class="modal-content modal-confirm">
             <div class="confirm-icon">👋</div>
@@ -233,7 +268,7 @@
         </div>
     </div>
 
-    <!-- Modal de confirmación de eliminar tarea -->
+    <!-- Modal de eliminar tarea -->
     <div id="modal-eliminar" class="modal hidden">
         <div class="modal-content modal-confirm">
             <div class="confirm-icon">🗑️</div>
@@ -253,5 +288,28 @@
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tareas.js') }}"></script>
+    
+    <!-- Modal de papelera -->
+    <div id="modal-papelera" class="modal hidden">
+        <div class="modal-content modal-papelera">
+            <div class="papelera-header">
+                <h2>🗑️ Papelera de reciclaje</h2>
+                <button type="button" id="btn-cerrar-papelera" class="btn-cerrar-modal" title="Cerrar">×</button>
+            </div>
+            <p class="papelera-info">
+                Las tareas eliminadas se guardan aquí. Puedes restaurarlas o borrarlas definitivamente.
+            </p>
+
+            <div id="lista-papelera" class="lista-papelera">
+                <div class="loading">Cargando papelera...</div>
+            </div>
+
+            <div class="modal-actions papelera-acciones">
+                <button type="button" id="btn-vaciar-papelera" class="btn-danger">
+                    🗑️ Vaciar papelera
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
