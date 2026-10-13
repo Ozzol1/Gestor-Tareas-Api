@@ -1,25 +1,34 @@
 """
-Servicio de envío de emails con Resend.
+Servicio de envío de emails usando Gmail SMTP.
 """
 import os
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
-def _configurar_resend():
-    api_key = os.getenv("RESEND_API_KEY")
-    if not api_key:
-        print("⚠️  RESEND_API_KEY no está configurada. Los emails no se enviarán.")
-        return False
-    resend.api_key = api_key
-    return True
+def _configurar_smtp():
+    """Devuelve (sender, password) o (None, None) si falta configuración."""
+    sender = os.getenv("MAIL_SENDER")
+    password = os.getenv("MAIL_APP_PASSWORD")
+
+    if not sender or not password:
+        print("⚠️  MAIL_SENDER o MAIL_APP_PASSWORD no configurados. Emails no enviados.")
+        return None, None
+
+    # Gmail acepta la contraseña con o sin espacios, pero los quitamos por seguridad
+    password = password.replace(" ", "")
+
+    return sender, password
 
 
 def enviar_email_recuperacion(email_destino, token):
     """
-    Envía un email con el enlace para recuperar la contraseña.
+    Envía un email con el enlace para recuperar la contraseña usando Gmail SMTP.
     Devuelve True si se envió, False si falló.
     """
-    if not _configurar_resend():
+    sender, password = _configurar_smtp()
+    if not sender:
         return False
 
     app_url = os.getenv("APP_URL", "http://127.0.0.1:5000")
@@ -37,13 +46,11 @@ def enviar_email_recuperacion(email_destino, token):
             <tr>
                 <td align="center">
                     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:500px; background:#ffffff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden;">
-                        <!-- Header -->
                         <tr>
                             <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:30px; text-align:center;">
                                 <h1 style="margin:0; color:#ffffff; font-size:22px;">🚀 Gestor de Tareas</h1>
                             </td>
                         </tr>
-                        <!-- Body -->
                         <tr>
                             <td style="padding:40px 30px;">
                                 <h2 style="color:#2c3e50; font-size:20px; margin:0 0 15px 0;">Recuperar contraseña</h2>
@@ -70,7 +77,6 @@ def enviar_email_recuperacion(email_destino, token):
                                 </p>
                             </td>
                         </tr>
-                        <!-- Footer -->
                         <tr>
                             <td style="background:#f8f9fa; padding:20px; text-align:center; border-top:1px solid #ecf0f1;">
                                 <p style="color:#95a5a6; font-size:12px; margin:0;">
@@ -86,14 +92,24 @@ def enviar_email_recuperacion(email_destino, token):
     </html>
     """
 
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = "Recuperar contraseña - Gestor de Tareas"
+    mensaje["From"] = f"Gestor de Tareas <{sender}>"
+    mensaje["To"] = email_destino
+    mensaje.attach(MIMEText(html, "html"))
+
     try:
-        resend.Emails.send({
-            "from": "onboarding@resend.dev",
-            "to": email_destino,
-            "subject": "Recuperar contraseña - Gestor de Tareas",
-            "html": html,
-        })
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.sendmail(sender, email_destino, mensaje.as_string())
         return True
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Error de autenticación con Gmail. Verifica MAIL_SENDER y MAIL_APP_PASSWORD.")
+        return False
+    except smtplib.SMTPException as e:
+        print(f"❌ Error SMTP: {e}")
+        return False
     except Exception as e:
-        print(f"❌ Error al enviar email: {e}")
+        print(f"❌ Error inesperado al enviar email: {e}")
         return False
