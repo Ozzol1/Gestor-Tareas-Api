@@ -67,7 +67,7 @@ def generar_pdf_tareas(tareas, usuario_email):
     if not tareas:
         elementos.append(Paragraph("No hay tareas para mostrar.", estilos["Normal"]))
     else:
-        datos = [["ID", "Título", "Descripción", "Prioridad", "Fecha límite", "Estado"]]
+        datos = [["ID", "Título", "Descripción", "Prioridad", "Categoría","Fecha límite", "Estado"]]
         for t in tareas:
             if t.completada:
                 estado = "Completada"
@@ -81,11 +81,12 @@ def generar_pdf_tareas(tareas, usuario_email):
                 t.titulo,
                 (t.descripcion[:40] + "…") if t.descripcion and len(t.descripcion) > 40 else (t.descripcion or "—"),
                 t.prioridad.capitalize(),
+                t.categoria,
                 t.fecha_limite or "—",
                 estado,
             ])
 
-        tabla = Table(datos, colWidths=[1.2 * cm, 4.5 * cm, 6 * cm, 2.5 * cm, 2.8 * cm, 2.5 * cm])
+        tabla = Table(datos, colWidths=[1.2 * cm, 4 * cm, 5 * cm, 2.2 * cm, 2.5 * cm, 2.5 * cm, 2.3 * cm])
         tabla.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#" + COLOR_DARK)),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -168,6 +169,7 @@ def generar_pdf_tarea(tarea, usuario_email):
     fila("Descripción", tarea.descripcion or "—")
     fila("Prioridad", tarea.prioridad.capitalize())
     fila("Fecha límite", tarea.fecha_limite or "—")
+    fila("Categoría", tarea.categoria)
     fila("Estado", "✅ Completada" if tarea.completada else ("⚠️ Vencida" if _esta_vencida(tarea) else "⏳ Pendiente"))
     fila("Fecha de creación", tarea.fecha_creacion.strftime("%d/%m/%Y a las %H:%M") if tarea.fecha_creacion else "—")
 
@@ -199,7 +201,7 @@ def generar_excel_tareas(tareas, usuario_email):
     ws["A2"].alignment = Alignment(horizontal="center")
 
     # Encabezados
-    encabezados = ["ID", "Título", "Descripción", "Prioridad", "Fecha límite", "Estado"]
+    encabezados = ["ID", "Título", "Descripción", "Prioridad", "Categoría", "Fecha límite", "Estado"]
     for col, enc in enumerate(encabezados, start=1):
         celda = ws.cell(row=4, column=col, value=enc)
         celda.font = Font(bold=True, color="FFFFFF", size=11)
@@ -230,7 +232,7 @@ def generar_excel_tareas(tareas, usuario_email):
             estado, color_estado = "⏳ Pendiente", "2980B9"
 
         valores = [t.id, t.titulo, t.descripcion or "", t.prioridad.capitalize(),
-                   t.fecha_limite or "—", estado]
+                   t.categoria, t.fecha_limite or "—", estado]
         for col, val in enumerate(valores, start=1):
             celda = ws.cell(row=fila, column=col, value=val)
             celda.border = borde
@@ -268,6 +270,7 @@ def generar_excel_tarea(tarea, usuario_email):
         ("Título", tarea.titulo),
         ("Descripción", tarea.descripcion or "—"),
         ("Prioridad", tarea.prioridad.capitalize()),
+        ("Categoría", tarea.categoria),
         ("Fecha límite", tarea.fecha_limite or "—"),
         ("Estado", "✅ Completada" if tarea.completada else ("⚠️ Vencida" if _esta_vencida(tarea) else "⏳ Pendiente")),
         ("Fecha de creación", tarea.fecha_creacion.strftime("%d/%m/%Y a las %H:%M") if tarea.fecha_creacion else "—"),
@@ -319,6 +322,7 @@ def generar_txt_tarea(tarea, usuario_email):
         f"Título:          {tarea.titulo}",
         f"Descripción:     {tarea.descripcion or '—'}",
         f"Prioridad:       {tarea.prioridad.capitalize()}",
+        f"Categoría:       {tarea.categoria}", 
         f"Fecha límite:    {tarea.fecha_limite or '—'}",
         f"Estado:          {estado}",
         f"Fecha creación:  {tarea.fecha_creacion.strftime('%d/%m/%Y a las %H:%M') if tarea.fecha_creacion else '—'}",

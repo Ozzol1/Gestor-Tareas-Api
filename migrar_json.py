@@ -65,6 +65,7 @@ def migrar(ruta_json):
                 descripcion=t.get("descripcion"),
                 completada=bool(t.get("completada", False)),
                 prioridad=t.get("prioridad", "media"),
+                categoria=t.get("categoria", "Personal"),
                 fecha_limite=t.get("fecha_limite"),
             )
             db.session.add(nueva)
