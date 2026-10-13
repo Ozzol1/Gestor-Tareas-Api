@@ -47,6 +47,10 @@ class Tarea(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     completada = db.Column(db.Boolean, default=False, nullable=False)
     prioridad = db.Column(db.String(10), default="media", nullable=False)
+    categoria = db.Column(db.String(50), nullable=False, default="Personal")
+    orden = db.Column(db.Integer, default=0, nullable=False)
+    eliminada = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    fecha_eliminacion = db.Column(db.DateTime, nullable=True)
     fecha_limite = db.Column(db.String(10), nullable=True)
     fecha_creacion = db.Column(
         db.DateTime,
@@ -62,6 +66,10 @@ class Tarea(db.Model):
             "descripcion": self.descripcion,
             "completada": self.completada,
             "prioridad": self.prioridad,
+            "categoria": self.categoria,
+            "orden": self.orden,
+            "eliminada": self.eliminada,  # ← NUEVO
+            "fecha_eliminacion": self.fecha_eliminacion.isoformat() if self.fecha_eliminacion else None,  # ← NUEVO
             "fecha_limite": self.fecha_limite,
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
             "usuario_id": self.usuario_id,

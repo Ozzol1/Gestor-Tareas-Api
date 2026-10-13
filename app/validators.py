@@ -3,6 +3,22 @@ from app.utils import email_valido, password_valida
 
 PRIORIDADES_VALIDAS = ["alta", "media", "baja"]
 
+CATEGORIAS_PREDEFINIDAS = ["Personal", "Trabajo", "Estudio", "Compras", "Salud"]
+
+
+def validar_categoria(categoria):
+    """Valida que la categoría sea un string razonable."""
+    if categoria is None:
+        return True, None  # Opcional en PATCH
+    if not isinstance(categoria, str):
+        return False, "La categoría debe ser texto."
+    categoria = categoria.strip()
+    if len(categoria) < 1:
+        return False, "La categoría no puede estar vacía."
+    if len(categoria) > 50:
+        return False, "La categoría no puede tener más de 50 caracteres."
+    return True, None
+
 
 def validar_payload_tarea(data, parcial=False):
     if not isinstance(data, dict):
@@ -31,7 +47,12 @@ def validar_payload_tarea(data, parcial=False):
     if "descripcion" in data and data["descripcion"] is not None:
         if not isinstance(data["descripcion"], str):
             return False, "El campo 'descripcion' debe ser texto."
-
+        
+    if "categoria" in data:
+        es_valida, error_cat = validar_categoria(data["categoria"])
+        if not es_valida:
+            return False, error_cat
+        
     return True, None
 
 
