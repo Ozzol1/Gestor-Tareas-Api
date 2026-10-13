@@ -23,24 +23,41 @@ if (olvideForm) {
         const boton = olvideForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
-        boton.textContent = "Enviando...";
+        boton.innerHTML = '<span class="spinner"></span>Enviando...';
 
-        const { ok, data } = await apiFetch("/auth/olvide-password", {
-            method: "POST",
-            body: JSON.stringify({ email }),
-            skipAuthRedirect: true,
-        });
+        const [respuesta] = await Promise.all([
+            apiFetch("/auth/olvide-password", {
+                method: "POST",
+                body: JSON.stringify({ email }),
+                skipAuthRedirect: true,
+            }),
+            new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+
+        const { ok, data } = respuesta;
 
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
         if (ok) {
-            document.getElementById("modal-email-enviado").classList.remove("hidden");
+            const modal = document.getElementById("modal-email-enviado");
+            if (modal) {
+                modal.classList.remove("hidden");
+
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 3000);
+            } else {
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 1000);
+            }
         } else {
             mostrarError(data.error || "Error al enviar el email. Intenta de nuevo.");
         }
     });
 }
+
 
 // ====================================================
 // RESET PASSWORD - Formulario
@@ -72,22 +89,34 @@ if (resetForm) {
         const boton = resetForm.querySelector("button[type='submit']");
         const textoOriginal = boton.textContent;
         boton.disabled = true;
-        boton.textContent = "Actualizando...";
+        boton.innerHTML = '<span class="spinner"></span>Actualizando...';
 
-        const { ok, data } = await apiFetch(`/auth/reset-password/${window.RESET_TOKEN}`, {
-            method: "POST",
-            body: JSON.stringify({ password }),
-            skipAuthRedirect: true,
-        });
+        const [respuesta] = await Promise.all([
+            apiFetch(`/auth/reset-password/${window.RESET_TOKEN}`, {
+                method: "POST",
+                body: JSON.stringify({ password }),
+                skipAuthRedirect: true,
+            }),
+            new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+
+        const { ok, data } = respuesta;
 
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
         if (ok) {
-            document.getElementById("modal-password-cambiada").classList.remove("hidden");
-            setTimeout(() => {
-                window.location.href = "/login";
-            }, 2800);
+            const modal = document.getElementById("modal-password-cambiada");
+            if (modal) {
+                modal.classList.remove("hidden");
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 2800);
+            } else {
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 1000);
+            }
         } else {
             mostrarError(data.error || "Error al actualizar la contraseña.");
         }

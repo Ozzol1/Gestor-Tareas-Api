@@ -99,8 +99,8 @@ select:focus {
 }
 
 button {
-    width: 100%;
-    padding: 12px;
+    width: auto;
+    padding: 12px 20px;
     background: #3498db;
     color: white;
     border: none;
@@ -109,6 +109,18 @@ button {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
+    font-family: inherit;
+}
+
+/* Excepciones: los botones de formularios SÍ ocupan todo el ancho */
+.form-group > button,
+.nueva-tarea form > button,
+#login-form > button[type="submit"],
+#registro-form > button[type="submit"],
+#olvide-form > button[type="submit"],
+#reset-form > button[type="submit"],
+.modal-actions > button {
+    width: 100%;
 }
 
 button:hover {
@@ -2121,3 +2133,478 @@ html[data-theme="dark"] .btn-404-secondary:hover {
         width: 100%;
     }
 }
+
+/* ====================================================
+   CATEGORÍAS
+   ==================================================== */
+.form-row-4 {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+
+@media (max-width: 900px) {
+    .form-row-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-row-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Filtro de categoría (igual estilo que el de prioridad) */
+.filtro-categoria {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filtro-categoria label {
+    margin-bottom: 0;
+    font-size: 0.9em;
+    color: #7f8c8d;
+    white-space: nowrap;
+}
+
+.filtro-categoria select {
+    padding: 10px 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 10px;
+    font-size: 0.95em;
+    background: white;
+    cursor: pointer;
+    min-width: 140px;
+    transition: border 0.2s;
+    font-family: inherit;
+}
+
+.filtro-categoria select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Badges de la tarjeta */
+.tarea-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.badge-categoria {
+    background: #9b59b6;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .filtro-categoria label {
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .filtro-categoria select {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .badge-categoria {
+    background: #8e44ad;
+}
+
+/* ====================================================
+   FIX DEFINITIVO: Botones de tareas
+   ==================================================== */
+
+/* Forzar que el contenedor sea siempre flex row */
+.tarea-card .tarea-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    margin-top: 12px !important;
+    width: 100% !important;
+}
+
+/* Resetear TODOS los estilos de botón dentro de tarea-actions */
+.tarea-card .tarea-actions button,
+.tarea-card .tarea-actions .btn-toggle,
+.tarea-card .tarea-actions .btn-edit,
+.tarea-card .tarea-actions .btn-delete,
+.tarea-card .tarea-actions .btn-export-tarea {
+    all: unset !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 7px 14px !important;
+    font-size: 0.85em !important;
+    font-weight: 600 !important;
+    font-family: inherit !important;
+    line-height: 1.2 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    width: auto !important;
+    max-width: fit-content !important;
+    min-width: fit-content !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+    color: white !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Colores específicos de cada botón */
+.tarea-card .tarea-actions .btn-toggle {
+    background-color: #2ecc71 !important;
+}
+.tarea-card .tarea-actions .btn-toggle:hover {
+    background-color: #27ae60 !important;
+}
+
+.tarea-card .tarea-actions .btn-edit {
+    background-color: #f39c12 !important;
+}
+.tarea-card .tarea-actions .btn-edit:hover {
+    background-color: #e67e22 !important;
+}
+
+.tarea-card .tarea-actions .btn-export-tarea {
+    background-color: #9b59b6 !important;
+}
+.tarea-card .tarea-actions .btn-export-tarea:hover {
+    background-color: #8e44ad !important;
+}
+
+.tarea-card .tarea-actions .btn-delete {
+    background-color: #e74c3c !important;
+}
+.tarea-card .tarea-actions .btn-delete:hover {
+    background-color: #c0392b !important;
+}
+
+/* ====================================================
+   DRAG & DROP
+   ==================================================== */
+   .tarea-card {
+    cursor: grab;
+}
+
+.tarea-card:active {
+    cursor: grabbing;
+}
+
+.tarea-card.arrastrando {
+    opacity: 0.4;
+    transform: scale(0.98);
+    cursor: grabbing;
+}
+
+.tarea-card.drag-over {
+    border-top: 3px solid #3498db;
+    transform: translateY(2px);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+/* Icono de agarre visual (opcional) */
+.tarea-card::before {
+    content: "⋮⋮";
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #bdc3c7;
+    font-size: 12px;
+    letter-spacing: -2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.tarea-card:hover::before {
+    opacity: 0.7;
+}
+
+.tarea-card {
+    position: relative;
+    padding-left: 20px; /* espacio para el icono de agarre */
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .tarea-card.drag-over {
+    border-top-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+/* ====================================================
+   BOTÓN DE PAPELERA (header)
+   ==================================================== */
+   .btn-papelera {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 8px 16px;
+    background: transparent;
+    color: #7f8c8d;
+    border: 2px solid #7f8c8d;
+    font-size: 0.9em;
+    font-weight: 600;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+
+.btn-papelera:hover {
+    background: #7f8c8d;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(127, 140, 141, 0.3);
+}
+
+.btn-papelera:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+    .btn-papelera-texto {
+        display: none;
+    }
+    .btn-papelera {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        border-radius: 50%;
+        justify-content: center;
+    }
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .btn-papelera {
+    color: var(--text-muted);
+    border-color: var(--text-muted);
+}
+html[data-theme="dark"] .btn-papelera:hover {
+    background: var(--text-muted);
+    color: var(--bg-card);
+}
+
+/* ====================================================
+   MODAL DE PAPELERA
+   ==================================================== */
+.modal-papelera {
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+}
+
+.papelera-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.papelera-header h2 {
+    margin: 0;
+    text-align: left;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.btn-cerrar-modal {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #95a5a6;
+    font-size: 1.5em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+    padding: 0;
+}
+
+.btn-cerrar-modal:hover {
+    background: #ecf0f1;
+    color: #2c3e50;
+}
+
+.papelera-info {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    margin-bottom: 15px;
+    text-align: left;
+    line-height: 1.5;
+}
+
+.lista-papelera {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    max-height: 50vh;
+    padding-right: 5px;
+}
+
+.papelera-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-left: 4px solid #95a5a6;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+}
+
+.papelera-card:hover {
+    background: #ecf0f1;
+}
+
+.papelera-info-tarea {
+    flex: 1;
+    min-width: 0;
+}
+
+.papelera-info-tarea h4 {
+    margin: 0 0 4px 0;
+    color: #2c3e50;
+    font-size: 0.95em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.papelera-fecha {
+    margin: 0;
+    color: #95a5a6;
+    font-size: 0.8em;
+    text-align: left;
+}
+
+.papelera-acciones-tarea {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.papelera-acciones-tarea button {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.8em;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-restaurar {
+    background: #2ecc71;
+    color: white;
+}
+
+.btn-restaurar:hover {
+    background: #27ae60;
+    transform: translateY(-1px);
+}
+
+.btn-eliminar-def {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-eliminar-def:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+}
+
+.papelera-acciones {
+    padding-top: 15px;
+    border-top: 2px solid #ecf0f1;
+    margin-top: 0;
+}
+
+.papelera-acciones button {
+    width: 100%;
+}
+
+/* Modo oscuro — Papelera */
+html[data-theme="dark"] .papelera-header {
+    border-bottom-color: var(--border-color);
+}
+html[data-theme="dark"] .papelera-header h2 {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .btn-cerrar-modal:hover {
+    background: var(--bg-alt);
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .papelera-info {
+    color: var(--text-secondary);
+}
+html[data-theme="dark"] .papelera-card {
+    background: var(--bg-section);
+}
+html[data-theme="dark"] .papelera-card:hover {
+    background: var(--bg-alt);
+}
+html[data-theme="dark"] .papelera-info-tarea h4 {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .papelera-fecha {
+    color: var(--text-muted);
+}
+html[data-theme="dark"] .papelera-acciones {
+    border-top-color: var(--border-color);
+}
+
+@media (max-width: 600px) {
+    .papelera-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .papelera-acciones-tarea {
+        width: 100%;
+    }
+    .papelera-acciones-tarea button {
+        flex: 1;
+    }
+}
+
+/* ====================================================
+   FIX: Botones de tareas compactos
+   ==================================================== */
+   .tarea-actions button,
+   .tarea-card button {
+       width: auto !important;
+       max-width: max-content !important;
+       min-width: 0 !important;
+       display: inline-flex !important;
+       flex: 0 0 auto !important;
+       padding: 6px 12px !important;
+       font-size: 0.85em !important;
+       white-space: nowrap !important;
+   }
