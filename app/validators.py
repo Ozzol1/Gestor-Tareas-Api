@@ -4,7 +4,7 @@ from app.utils import email_valido, password_valida
 PRIORIDADES_VALIDAS = ["alta", "media", "baja"]
 
 CATEGORIAS_PREDEFINIDAS = ["Personal", "Trabajo", "Estudio", "Compras", "Salud"]
-
+RECURRENCIAS_VALIDAS = ["ninguna", "diaria", "semanal", "mensual", "anual"]
 
 def validar_categoria(categoria):
     """Valida que la categoría sea un string razonable."""
@@ -18,7 +18,6 @@ def validar_categoria(categoria):
     if len(categoria) > 50:
         return False, "La categoría no puede tener más de 50 caracteres."
     return True, None
-
 
 def validar_payload_tarea(data, parcial=False):
     if not isinstance(data, dict):
@@ -52,6 +51,10 @@ def validar_payload_tarea(data, parcial=False):
         es_valida, error_cat = validar_categoria(data["categoria"])
         if not es_valida:
             return False, error_cat
+
+    if "recurrencia" in data:
+        if data["recurrencia"] not in RECURRENCIAS_VALIDAS:
+            return False, f"Recurrencia inválida. Debe ser una de: {', '.join(RECURRENCIAS_VALIDAS)}."
         
     return True, None
 
@@ -120,5 +123,24 @@ def validar_reset_password(data):
         return False, "El campo 'password' es obligatorio."
     if not password_valida(password):
         return False, "La contraseña debe tener al menos 8 caracteres."
+
+    return True, None
+
+def validar_cambio_password(data):
+    """Valida el payload para cambiar la contraseña estando logueado."""
+    if not isinstance(data, dict):
+        return False, "El cuerpo debe ser un objeto JSON válido."
+
+    actual = data.get("password_actual")
+    nueva = data.get("password_nueva")
+
+    if not actual:
+        return False, "Debes ingresar tu contraseña actual."
+    if not nueva:
+        return False, "Debes ingresar la nueva contraseña."
+    if not password_valida(nueva):
+        return False, "La nueva contraseña debe tener al menos 8 caracteres."
+    if actual == nueva:
+        return False, "La nueva contraseña debe ser diferente a la actual."
 
     return True, None

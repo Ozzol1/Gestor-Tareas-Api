@@ -1,3 +1,4 @@
+import os
 import secrets
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify
@@ -9,6 +10,7 @@ from app.validators import (
     validar_login,
     validar_olvide_password,
     validar_reset_password,
+    validar_cambio_password,
 )
 from app import email_service
 
@@ -33,13 +35,30 @@ def registro():
     if Usuario.query.filter_by(email=email).first():
         return jsonify({"error": "El email ya está registrado."}), 409
 
+    # Generar token de verificación (24h)
+    token = secrets.token_urlsafe(32)
+
     nuevo = Usuario(email=email)
     nuevo.set_password(data["password"])
+    nuevo.email_verificado = False
+    nuevo.verificacion_token = token
+    nuevo.verificacion_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.session.add(nuevo)
     db.session.commit()
 
+    # En desarrollo (APP_URL apunta a localhost) NO requiere verificación
+    app_url = os.getenv("APP_URL", "")
+    if "localhost" in app_url or "127.0.0.1" in app_url:
+        nuevo.email_verificado = True
+        nuevo.verificacion_token = None
+        nuevo.verificacion_token_expires = None
+        db.session.commit()
+        print(f"🛠️  DEV: Usuario {email} auto-verificado")
+    else:
+        # En producción (Render) SÍ envía el email
+        email_service.enviar_email_verificacion(email, token)
     return jsonify({
-        "mensaje": "Usuario registrado correctamente.",
+        "mensaje": "Usuario registrado. Revisa tu email para verificar tu cuenta.",
         "usuario": nuevo.to_dict()
     }), 201
 
@@ -62,6 +81,13 @@ def login():
 
     if not usuario or not usuario.check_password(data["password"]):
         return jsonify({"error": "Credenciales inválidas."}), 401
+
+    # Verificar email
+    if not usuario.email_verificado:
+        return jsonify({
+            "error": "Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
+            "codigo": "email_no_verificado"
+        }), 403
 
     access_token = create_access_token(identity=str(usuario.id))
 
@@ -168,3 +194,104 @@ def reset_password(token):
     db.session.commit()
 
     return jsonify({"mensaje": "Contraseña actualizada correctamente. Ya puedes iniciar sesión."}), 200
+
+# ====================================================
+# POST /auth/cambiar-password
+# ====================================================
+@bp.route("/cambiar-password", methods=["POST"])
+@jwt_required()
+def cambiar_password():
+    """
+    Cambia la contraseña de un usuario autenticado.
+    Requiere: contraseña actual + nueva contraseña.
+    """
+    usuario_id = int(get_jwt_identity())
+    usuario = db.session.get(Usuario, usuario_id)
+
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado."}), 404
+
+    if not request.is_json:
+        return jsonify({"error": "El Content-Type debe ser application/json."}), 400
+
+    data = request.get_json()
+    es_valido, error = validar_cambio_password(data)
+    if not es_valido:
+        return jsonify({"error": error}), 400
+
+    # Verificar contraseña actual
+    if not usuario.check_password(data["password_actual"]):
+        return jsonify({"error": "La contraseña actual es incorrecta."}), 400
+
+    # Actualizar contraseña
+    usuario.set_password(data["password_nueva"])
+    db.session.commit()
+
+    return jsonify({"mensaje": "Contraseña actualizada correctamente."}), 200
+
+# ====================================================
+# GET /auth/verificar-email/<token>
+# ====================================================
+@bp.route("/verificar-email/<token>", methods=["GET"])
+def verificar_email(token):
+    """Verifica el email del usuario con el token."""
+    usuario = Usuario.query.filter_by(verificacion_token=token).first()
+
+    if not usuario:
+        return jsonify({"error": "El enlace es inválido o ya fue utilizado."}), 400
+
+    # Verificar expiración
+    ahora = datetime.now(timezone.utc)
+    expira = usuario.verificacion_token_expires
+    if expira and expira.tzinfo is None:
+        expira = expira.replace(tzinfo=timezone.utc)
+
+    if not expira or ahora > expira:
+        usuario.verificacion_token = None
+        usuario.verificacion_token_expires = None
+        db.session.commit()
+        return jsonify({"error": "El enlace ha expirado. Solicita uno nuevo."}), 400
+
+    # Marcar como verificado
+    usuario.email_verificado = True
+    usuario.verificacion_token = None
+    usuario.verificacion_token_expires = None
+    db.session.commit()
+
+    return jsonify({"mensaje": "Email verificado correctamente. Ya puedes iniciar sesión."}), 200
+
+
+# ====================================================
+# POST /auth/reenviar-verificacion
+# ====================================================
+@bp.route("/reenviar-verificacion", methods=["POST"])
+def reenviar_verificacion():
+    """Reenvía el email de verificación."""
+    if not request.is_json:
+        return jsonify({"error": "El Content-Type debe ser application/json."}), 400
+
+    data = request.get_json()
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"error": "El email es obligatorio."}), 400
+
+    usuario = Usuario.query.filter_by(email=email).first()
+
+    # Respuesta genérica por seguridad
+    respuesta_ok = {
+        "mensaje": "Si el email está registrado y no verificado, recibirás un nuevo enlace en breve."
+    }
+
+    if not usuario or usuario.email_verificado:
+        return jsonify(respuesta_ok), 200
+
+    # Generar nuevo token
+    token = secrets.token_urlsafe(32)
+    usuario.verificacion_token = token
+    usuario.verificacion_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+    db.session.commit()
+
+    email_service.enviar_email_verificacion(usuario.email, token)
+
+    return jsonify(respuesta_ok), 200

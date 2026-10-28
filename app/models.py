@@ -19,6 +19,10 @@ class Usuario(db.Model):
     # Recuperación de contraseña
     reset_token = db.Column(db.String(100), nullable=True, index=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
+    # Verificación de email
+    email_verificado = db.Column(db.Boolean, default=False, nullable=False)
+    verificacion_token = db.Column(db.String(100), nullable=True, index=True)
+    verificacion_token_expires = db.Column(db.DateTime, nullable=True)
 
     tareas = db.relationship("Tarea", backref="usuario", lazy=True)
 
@@ -33,6 +37,7 @@ class Usuario(db.Model):
             "id": self.id,
             "email": self.email,
             "fecha_registro": self.fecha_registro.isoformat() if self.fecha_registro else None,
+            "email_verificado": self.email_verificado,
         }
 
     def __repr__(self):
@@ -48,6 +53,7 @@ class Tarea(db.Model):
     completada = db.Column(db.Boolean, default=False, nullable=False)
     prioridad = db.Column(db.String(10), default="media", nullable=False)
     categoria = db.Column(db.String(50), nullable=False, default="Personal")
+    recurrencia = db.Column(db.String(20), default="ninguna", nullable=False)
     orden = db.Column(db.Integer, default=0, nullable=False)
     eliminada = db.Column(db.Boolean, default=False, nullable=False, index=True)
     fecha_eliminacion = db.Column(db.DateTime, nullable=True)
@@ -58,9 +64,11 @@ class Tarea(db.Model):
         nullable=False
     )
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
+    subtareas = db.relationship("Subtarea", backref="tarea", cascade="all, delete-orphan", lazy=True)
 
     def to_dict(self):
         return {
+            "recurrencia": self.recurrencia,
             "id": self.id,
             "titulo": self.titulo,
             "descripcion": self.descripcion,
@@ -68,12 +76,28 @@ class Tarea(db.Model):
             "prioridad": self.prioridad,
             "categoria": self.categoria,
             "orden": self.orden,
-            "eliminada": self.eliminada,  # ← NUEVO
-            "fecha_eliminacion": self.fecha_eliminacion.isoformat() if self.fecha_eliminacion else None,  # ← NUEVO
+            "eliminada": self.eliminada,
+            "fecha_eliminacion": self.fecha_eliminacion.isoformat() if self.fecha_eliminacion else None,
             "fecha_limite": self.fecha_limite,
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
             "usuario_id": self.usuario_id,
+            "subtareas": [s.to_dict() for s in self.subtareas],  # ← NUEVO
         }
 
     def __repr__(self):
         return f"<Tarea {self.id}: {self.titulo}>"
+
+class Subtarea(db.Model):
+    __tablename__ = "subtareas"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    texto = db.Column(db.String(200), nullable=False)
+    completada = db.Column(db.Boolean, default=False, nullable=False)
+    tarea_id = db.Column(db.Integer, db.ForeignKey("tareas.id"), nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "texto": self.texto,
+            "completada": self.completada,
+        }
