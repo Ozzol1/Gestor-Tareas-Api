@@ -112,6 +112,18 @@ button {
     font-family: inherit;
 }
 
+/* Botones de FORMULARIOS: full width */
+#login-form button[type="submit"],
+#registro-form button[type="submit"],
+#olvide-form button[type="submit"],
+#reset-form button[type="submit"],
+#form-nueva-tarea button[type="submit"],
+#form-editar button[type="submit"],
+#form-password button[type="submit"],
+.modal-actions button {
+    width: 100%;
+}
+
 /* Excepciones: los botones de formularios SÍ ocupan todo el ancho */
 .form-group > button,
 .nueva-tarea form > button,
@@ -269,10 +281,26 @@ a:hover {
 
 .form-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
+    margin-bottom: 10px;
 }
 
+.form-row-4 {
+    grid-template-columns: 1fr 1.3fr 1fr 1fr;
+}
+
+@media (max-width: 900px) {
+    .form-row-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-row-4 {
+        grid-template-columns: 1fr;
+    }
+}
 /* Filtros */
 .filtros {
     display: flex;
@@ -2218,23 +2246,6 @@ html[data-theme="dark"] .filtro-categoria select {
 html[data-theme="dark"] .badge-categoria {
     background: #8e44ad;
 }
-
-/* ====================================================
-   FIX DEFINITIVO: Botones de tareas
-   ==================================================== */
-
-/* Forzar que el contenedor sea siempre flex row */
-.tarea-card .tarea-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 8px !important;
-    margin-top: 12px !important;
-    width: 100% !important;
-}
-
 /* Resetear TODOS los estilos de botón dentro de tarea-actions */
 .tarea-card .tarea-actions button,
 .tarea-card .tarea-actions .btn-toggle,
@@ -2594,17 +2605,683 @@ html[data-theme="dark"] .papelera-acciones {
     }
 }
 
-/* ====================================================
-   FIX: Botones de tareas compactos
+   /* ====================================================
+   TOGGLE VISTA LISTA / CALENDARIO
    ==================================================== */
-   .tarea-actions button,
-   .tarea-card button {
-       width: auto !important;
-       max-width: max-content !important;
-       min-width: 0 !important;
-       display: inline-flex !important;
-       flex: 0 0 auto !important;
-       padding: 6px 12px !important;
-       font-size: 0.85em !important;
-       white-space: nowrap !important;
-   }
+.vista-toggle {
+    display: flex;
+    gap: 6px;
+    background: #ecf0f1;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    width: fit-content;
+}
+
+.vista-btn {
+    width: auto;
+    padding: 8px 16px;
+    background: transparent;
+    color: #7f8c8d;
+    font-size: 0.9em;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.vista-btn:hover {
+    color: #2c3e50;
+}
+
+.vista-btn.active {
+    background: white;
+    color: #3498db;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* ====================================================
+   CALENDARIO
+   ==================================================== */
+.vista-calendario {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.calendario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendario-titulo {
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 700;
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.btn-nav-mes {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ecf0f1;
+    color: #2c3e50;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    font-family: inherit;
+}
+
+.btn-nav-mes:hover {
+    background: #3498db;
+    color: white;
+    transform: scale(1.05);
+}
+
+.calendario-dias-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.calendario-dias-semana > div {
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 8px 0;
+    letter-spacing: 0.5px;
+}
+
+.calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.calendario-celda {
+    aspect-ratio: 1;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    transition: all 0.15s;
+    min-height: 70px;
+    border: 2px solid transparent;
+}
+
+.calendario-celda-vacia {
+    background: transparent;
+    pointer-events: none;
+}
+
+.calendario-celda:not(.calendario-celda-vacia):hover {
+    background: #ecf0f1;
+}
+
+.calendario-celda[data-tiene="1"] {
+    cursor: pointer;
+}
+
+.calendario-celda[data-tiene="1"]:hover {
+    border-color: #3498db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+}
+
+.calendario-hoy {
+    background: #e3f2fd;
+    border-color: #3498db !important;
+}
+
+.calendario-hoy .calendario-dia-num {
+    color: #2980b9;
+    font-weight: 800;
+}
+
+.calendario-dia-num {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.calendario-dots {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: auto;
+}
+
+.calendario-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.calendario-dot.dot-alta { background: #e74c3c; }
+.calendario-dot.dot-media { background: #f39c12; }
+.calendario-dot.dot-baja { background: #2ecc71; }
+
+.calendario-mas {
+    font-size: 0.7em;
+    color: #7f8c8d;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+/* ====================================================
+   MODAL DEL DÍA
+   ==================================================== */
+.modal-dia {
+    max-width: 550px;
+    max-height: 85vh;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-dia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.modal-dia-header h2 {
+    margin: 0;
+    text-align: left;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.modal-dia-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 60vh;
+    padding-right: 5px;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .vista-toggle {
+    background: var(--bg-alt);
+}
+
+html[data-theme="dark"] .vista-btn {
+    color: var(--text-secondary);
+}
+html[data-theme="dark"] .vista-btn:hover {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .vista-btn.active {
+    background: var(--bg-card);
+    color: #60a5fa;
+}
+
+html[data-theme="dark"] .vista-calendario {
+    background: var(--bg-card);
+}
+
+html[data-theme="dark"] .calendario-titulo {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .btn-nav-mes {
+    background: var(--bg-alt);
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .btn-nav-mes:hover {
+    background: #3498db;
+    color: white;
+}
+
+html[data-theme="dark"] .calendario-dias-semana > div {
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .calendario-celda {
+    background: var(--bg-section);
+}
+html[data-theme="dark"] .calendario-celda:not(.calendario-celda-vacia):hover {
+    background: var(--bg-alt);
+}
+html[data-theme="dark"] .calendario-dia-num {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .calendario-hoy {
+    background: #1e3a5f;
+}
+html[data-theme="dark"] .calendario-hoy .calendario-dia-num {
+    color: #60a5fa;
+}
+html[data-theme="dark"] .calendario-mas {
+    color: var(--text-muted);
+}
+html[data-theme="dark"] .modal-dia-header {
+    border-bottom-color: var(--border-color);
+}
+html[data-theme="dark"] .modal-dia-header h2 {
+    color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+    .calendario-celda {
+        min-height: 55px;
+        padding: 5px;
+    }
+    .calendario-dia-num {
+        font-size: 0.8em;
+    }
+    .calendario-dot {
+        width: 6px;
+        height: 6px;
+    }
+}
+
+@media (max-width: 500px) {
+    .vista-toggle {
+        width: 100%;
+    }
+    .vista-btn {
+        flex: 1;
+    }
+    .calendario-celda {
+        min-height: 45px;
+        padding: 4px;
+        border-radius: 6px;
+    }
+    .calendario-dias-semana > div {
+        font-size: 0.7em;
+        padding: 4px 0;
+    }
+}
+
+/* ====================================================
+   MODAL DE CAMBIO DE CONTRASEÑA
+   ==================================================== */
+   .modal-password {
+    max-width: 480px;
+    padding: 25px;
+}
+
+.modal-password .modal-dia-header {
+    margin-bottom: 20px;
+}
+
+.modal-password .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-password label {
+    color: #34495e;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.modal-password input[type="password"] {
+    font-family: inherit;
+}
+
+.modal-password .modal-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.modal-password .modal-actions button {
+    width: auto;
+    padding: 10px 20px;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .modal-password label {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .modal-password .modal-actions {
+    border-top-color: var(--border-color);
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .modal-password {
+        padding: 20px;
+    }
+    .modal-password .modal-actions {
+        flex-direction: column-reverse;
+    }
+    .modal-password .modal-actions button {
+        width: 100%;
+    }
+}
+/* ====================================================
+   BOTÓN DE REENVIAR VERIFICACIÓN
+   ==================================================== */
+   .btn-reenviar {
+    display: block;
+    width: auto;
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-reenviar:hover {
+    background: #2980b9;
+}
+
+.btn-reenviar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ====================================================
+   PÁGINA DE VERIFICACIÓN
+   ==================================================== */
+.container-verificar {
+    max-width: 480px;
+    text-align: center;
+    padding: 50px 40px;
+}
+
+.verificar-estado h1 {
+    color: #2c3e50;
+    font-size: 1.4em;
+    margin: 15px 0;
+}
+
+.verificar-estado p {
+    color: #7f8c8d;
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.verificar-titulo {
+    color: #2ecc71 !important;
+}
+
+.spinner-grande {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #ecf0f1;
+    border-top-color: #3498db;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+}
+
+.error-icono {
+    font-size: 4em;
+    margin-bottom: 10px;
+}
+
+html[data-theme="dark"] .verificar-estado h1 {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .verificar-estado p {
+    color: var(--text-secondary);
+}
+
+/* ====================================================
+   RECURRENCIA
+   ==================================================== */
+   .form-row-5 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 1000px) {
+    .form-row-5 {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .form-row-5 {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 500px) {
+    .form-row-5 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.badge-recurrencia {
+    background: #3498db;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+html[data-theme="dark"] .badge-recurrencia {
+    background: #2980b9;
+}
+/* ====================================================
+   FIX DEFINITIVO: BOTONES DE TAREAS COMPACTOS
+   ==================================================== */
+   .tarea-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 10px !important;
+    align-items: center !important;
+}
+
+.tarea-actions button {
+    width: auto !important;
+    max-width: fit-content !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    padding: 6px 12px !important;
+    font-size: 0.85em !important;
+    line-height: 1.2 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+}
+
+/* Colores */
+.tarea-actions .btn-toggle { background: #2ecc71 !important; }
+.tarea-actions .btn-toggle:hover { background: #27ae60 !important; }
+.tarea-actions .btn-edit { background: #f39c12 !important; }
+.tarea-actions .btn-edit:hover { background: #e67e22 !important; }
+.tarea-actions .btn-export-tarea { background: #9b59b6 !important; }
+.tarea-actions .btn-export-tarea:hover { background: #8e44ad !important; }
+.tarea-actions .btn-delete { background: #e74c3c !important; }
+.tarea-actions .btn-delete:hover { background: #c0392b !important; }
+
+/* ====================================================
+   SUBTAREAS / CHECKLISTS
+   ==================================================== */
+   .subtareas-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.lista-subtareas-modal {
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.empty-subtareas {
+    color: #95a5a6;
+    font-size: 0.85em;
+    text-align: center;
+    margin: 10px 0;
+    font-style: italic;
+}
+
+.subtarea-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.subtarea-item:hover {
+    background: #ecf0f1;
+}
+
+.subtarea-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2ecc71;
+}
+
+.subtarea-texto {
+    flex: 1;
+    font-size: 0.9em;
+    color: #2c3e50;
+    cursor: pointer;
+    margin: 0;
+    text-align: left;
+}
+
+.subtarea-texto.completada {
+    text-decoration: line-through;
+    color: #95a5a6;
+}
+
+.btn-eliminar-subtarea {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: transparent;
+    color: #95a5a6;
+    border: none;
+    font-size: 1.2em;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.btn-eliminar-subtarea:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+.input-subtarea-container {
+    display: flex;
+    gap: 8px;
+}
+
+.input-subtarea-container input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ecf0f1;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.btn-agregar-subtarea {
+    width: 36px;
+    height: 36px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.btn-agregar-subtarea:hover {
+    background: #2980b9;
+}
+
+.badge-progreso {
+    background: #34495e;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .subtareas-section {
+    border-top-color: var(--border-color);
+}
+html[data-theme="dark"] .lista-subtareas-modal {
+    background: var(--bg-section);
+}
+html[data-theme="dark"] .subtarea-item:hover {
+    background: var(--bg-alt);
+}
+html[data-theme="dark"] .subtarea-texto {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .subtarea-texto.completada {
+    color: var(--text-muted);
+}
+html[data-theme="dark"] .input-subtarea-container input {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+}
+html[data-theme="dark"] .badge-progreso {
+    background: #475569;
+}
