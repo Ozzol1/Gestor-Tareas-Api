@@ -8,13 +8,17 @@
     <meta name="description" content="Gestor de tareas con API REST, autenticación JWT y frontend en vanilla JS.">
     <meta property="og:title" content="Gestor de Tareas - NovaTech">
     <meta property="og:description" content="Organiza tus tareas con autenticación segura. Demo en vivo.">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 <body class="dashboard-body">
     <div class="dashboard-container">
         <div class="header-actions">
             <span id="user-email" class="user-email"></span>
+            <button id="btn-cambiar-password" class="btn-papelera" title="Cambiar contraseña">
+                <span>🔑</span>
+                <span class="btn-papelera-texto">Contraseña</span>
+            </button>
             <button id="btn-papelera" class="btn-papelera" title="Ver papelera">
                 <span>🗑️</span>
                 <span class="btn-papelera-texto">Papelera</span>
@@ -68,11 +72,14 @@
         <section class="nueva-tarea">
             <h2>➕ Nueva Tarea</h2>
             <form id="form-nueva-tarea">
-                <div class="form-row form-row-4">
+                <div class="form-row">
                     <div class="form-group">
                         <label for="titulo">Título:</label>
                         <input type="text" id="titulo" required>
                     </div>
+                </div>
+
+                <div class="form-row form-row-4">
                     <div class="form-group">
                         <label for="prioridad">Prioridad:</label>
                         <select id="prioridad">
@@ -81,7 +88,7 @@
                             <option value="alta">🔴 Alta</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group-categoria">
                         <label for="categoria">Categoría:</label>
                         <select id="categoria">
                             <option value="Personal">📋 Personal</option>
@@ -90,6 +97,16 @@
                             <option value="Compras">🛒 Compras</option>
                             <option value="Salud">🏥 Salud</option>
                             <option value="__custom__">✨ Personalizada...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recurrencia">Repetir:</label>
+                        <select id="recurrencia">
+                            <option value="ninguna">Nunca</option>
+                            <option value="diaria">🔄 Diaria</option>
+                            <option value="semanal">🔄 Semanal</option>
+                            <option value="mensual">🔄 Mensual</option>
+                            <option value="anual">🔄 Anual</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -147,6 +164,15 @@
                 </select>
             </div>
         </section>
+        <!-- Toggle de vista (lista / calendario) -->
+        <div class="vista-toggle">
+            <button id="btn-vista-lista" class="vista-btn active" title="Vista lista">
+                📋 Lista
+            </button>
+            <button id="btn-vista-calendario" class="vista-btn" title="Vista calendario">
+                📅 Calendario
+            </button>
+        </div>
 
         <!-- Filtros de estado y exportación -->
         <section class="filtros">
@@ -178,14 +204,29 @@
             <h2>Editar Tarea</h2>
             <form id="form-editar">
                 <input type="hidden" id="edit-id">
+
                 <div class="form-group">
                     <label for="edit-titulo">Título:</label>
                     <input type="text" id="edit-titulo" required>
                 </div>
+
                 <div class="form-group">
                     <label for="edit-descripcion">Descripción:</label>
                     <textarea id="edit-descripcion" rows="3"></textarea>
                 </div>
+
+                <!-- SECCIÓN NUEVA: Subtareas -->
+                <div class="form-group subtareas-section">
+                    <label>Subtareas / Checklist:</label>
+                    <div id="lista-subtareas-modal" class="lista-subtareas-modal">
+                        <!-- Aquí se renderizan las subtareas -->
+                    </div>
+                    <div class="input-subtarea-container">
+                        <input type="text" id="input-nueva-subtarea" placeholder="Nueva subtarea..." maxlength="200">
+                        <button type="button" id="btn-agregar-subtarea" class="btn-agregar-subtarea">+</button>
+                    </div>
+                </div>
+
                 <div class="form-row form-row-4">
                     <div class="form-group">
                         <label for="edit-prioridad">Prioridad:</label>
@@ -195,7 +236,7 @@
                             <option value="alta">🔴 Alta</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group-categoria">
                         <label for="edit-categoria">Categoría:</label>
                         <select id="edit-categoria">
                             <option value="Personal">📋 Personal</option>
@@ -204,6 +245,16 @@
                             <option value="Compras">🛒 Compras</option>
                             <option value="Salud">🏥 Salud</option>
                             <option value="__custom__">✨ Personalizada...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-recurrencia">Repetir:</label>
+                        <select id="edit-recurrencia">
+                            <option value="ninguna">Nunca</option>
+                            <option value="diaria">🔄 Diaria</option>
+                            <option value="semanal">🔄 Semanal</option>
+                            <option value="mensual">🔄 Mensual</option>
+                            <option value="anual">🔄 Anual</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -224,6 +275,27 @@
             </form>
         </div>
     </div>
+
+        <!-- Vista calendario -->
+        <section id="vista-calendario" class="vista-calendario hidden">
+            <div class="calendario-header">
+                <button id="btn-mes-anterior" class="btn-nav-mes" title="Mes anterior">‹</button>
+                <h2 id="calendario-titulo" class="calendario-titulo">Mes Año</h2>
+                <button id="btn-mes-siguiente" class="btn-nav-mes" title="Mes siguiente">›</button>
+            </div>
+
+            <div class="calendario-dias-semana">
+                <div>Lun</div>
+                <div>Mar</div>
+                <div>Mié</div>
+                <div>Jue</div>
+                <div>Vie</div>
+                <div>Sáb</div>
+                <div>Dom</div>
+            </div>
+
+            <div id="calendario-grid" class="calendario-grid"></div>
+        </section>
 
     <!-- Modal de exportar tarea -->
     <div id="modal-exportar" class="modal hidden">
@@ -281,6 +353,40 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal de cambiar contraseña -->
+    <div id="modal-password" class="modal hidden">
+        <div class="modal-content modal-password">
+            <div class="modal-dia-header">
+                <h2>🔑 Cambiar contraseña</h2>
+                <button type="button" id="btn-cerrar-modal-password" class="btn-cerrar-modal" title="Cerrar">×</button>
+            </div>
+
+            <form id="form-password">
+                <div class="form-group">
+                    <label for="pass-actual">Contraseña actual:</label>
+                    <input type="password" id="pass-actual" required autocomplete="current-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="pass-nueva">Nueva contraseña (mínimo 8 caracteres):</label>
+                    <input type="password" id="pass-nueva" required minlength="8" autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="pass-confirmar">Confirmar nueva contraseña:</label>
+                    <input type="password" id="pass-confirmar" required minlength="8" autocomplete="new-password">
+                </div>
+
+                <div id="mensaje-error-password" class="error hidden"></div>
+
+                <div class="modal-actions">
+                    <button type="button" id="btn-cancelar-password" class="btn-secondary">Cancelar</button>
+                    <button type="submit" id="btn-guardar-password">Cambiar contraseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Contenedor de toasts -->
     <div id="toast-container" aria-live="polite"></div>
@@ -311,5 +417,15 @@
             </div>
         </div>
     </div>
+    <!-- Modal de tareas del día -->
+    <div id="modal-dia" class="modal hidden">
+        <div class="modal-content modal-dia">
+            <div class="modal-dia-header">
+                <h2 id="modal-dia-titulo">Tareas del día</h2>
+                <button type="button" id="btn-cerrar-modal-dia" class="btn-cerrar-modal" title="Cerrar">×</button>
+            </div>
+            <div id="modal-dia-lista" class="modal-dia-lista"></div>
+        </div>
+    </div>    
 </body>
 </html>

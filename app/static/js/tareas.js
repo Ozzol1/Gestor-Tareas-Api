@@ -1,4 +1,4 @@
-// ====================================================
+let subtareasTemporales = [];  // Subtareas mientras se edita
 // ESTADO GLOBAL
 // ====================================================
 let tareas = [];
@@ -206,18 +206,25 @@ function hayFiltrosActivos() {
 // ====================================================
 function renderizarTareas() {
     const lista = document.getElementById("lista-tareas");
-    const filtradas = tareasFiltradas();
 
-    actualizarEstadisticas();
-    actualizarContadorResultados(filtradas.length);
+    let filtradas = tareas;
+    if (filtroEstado === "pendientes") {
+        filtradas = tareas.filter(t => !t.completada);
+    } else if (filtroEstado === "completadas") {
+        filtradas = tareas.filter(t => t.completada);
+    }
 
     if (tareas.length === 0) {
         lista.innerHTML = renderizarEmptyStateGeneral();
+        actualizarEstadisticas();
+        actualizarContadorResultados(0);
         return;
     }
 
     if (filtradas.length === 0) {
         lista.innerHTML = renderizarEmptyStateFiltros();
+        actualizarEstadisticas();
+        actualizarContadorResultados(0);
         return;
     }
 
@@ -231,18 +238,28 @@ function renderizarTareas() {
             ? (estaVencida(t) ? `📅 ${t.fecha_limite} (vencida)` : `📅 ${t.fecha_limite}`)
             : "";
 
+        // ⬇️ NUEVO: Contador de subtareas ⬇️
+        let progresoHtml = "";
+        if (t.subtareas && t.subtareas.length > 0) {
+            const completadas = t.subtareas.filter(s => s.completada).length;
+            const total = t.subtareas.length;
+            progresoHtml = `<span class="badge badge-progreso" title="Subtareas completadas">✅ ${completadas}/${total}</span>`;
+        }
+
         return `
-            <div class="${clases.join(' ')}" 
-                 style="animation-delay: ${i * 0.04}s"
-                 draggable="true"
-                 data-id="${t.id}">
+            <div class="${clases.join(' ')}" style="animation-delay: ${i * 0.04}s" draggable="true" data-id="${t.id}">
                 <div class="tarea-header">
                     <h3>${escapeHtml(t.titulo)}</h3>
                     <div class="tarea-badges">
+                        ${progresoHtml}
                         <span class="badge badge-categoria">${escapeHtml(t.categoria || "Personal")}</span>
+                        ${t.recurrencia && t.recurrencia !== "ninguna" ? `<span class="badge badge-recurrencia" title="Se repite: ${t.recurrencia}">🔄 ${t.recurrencia}</span>` : ""}
                         <span class="badge badge-${t.prioridad}">${t.prioridad}</span>
                     </div>
                 </div>
+                ${t.descripcion ? `<p class="tarea-desc">${escapeHtml(t.descripcion)}</p>` : ""}
+                ${fechaTexto ? `<p class="tarea-fecha">${fechaTexto}</p>` : ""}
+                <div class="tarea-actions">
                     <button class="btn-toggle" data-id="${t.id}">
                         ${t.completada ? "↩️ Reabrir" : "✅ Completar"}
                     </button>
@@ -254,7 +271,7 @@ function renderizarTareas() {
         `;
     }).join("");
 
-    // Eventos
+    // Eventos de los botones
     lista.querySelectorAll(".btn-toggle").forEach(btn => {
         btn.addEventListener("click", () => toggleCompletada(parseInt(btn.dataset.id)));
     });
@@ -267,8 +284,13 @@ function renderizarTareas() {
     lista.querySelectorAll(".btn-delete").forEach(btn => {
         btn.addEventListener("click", () => abrirModalEliminar(parseInt(btn.dataset.id)));
     });
-    // ⬇️ AÑADIR ESTO AL FINAL DE renderizarTareas ⬇️
-    configurarDragAndDrop();
+
+    actualizarEstadisticas();
+    actualizarContadorResultados(filtradas.length);
+
+    if (typeof configurarDragAndDrop === "function") {
+        configurarDragAndDrop();
+    }
 }
 
 function actualizarContadorResultados(cantidad) {
@@ -413,18 +435,42 @@ function exportarTareaEnFormato(formato) {
 async function crearTarea(e) {
     e.preventDefault();
 
+    // 🔍 LOGS DE DEBUG
+    console.log("=== INICIANDO CREAR TAREA ===");
+    
+    const inputTitulo = document.getElementById("titulo");
+    console.log("Input titulo encontrado:", inputTitulo);
+    console.log("Valor del input titulo:", inputTitulo ? inputTitulo.value : "INPUT NO ENCONTRADO");
+
     const titulo = document.getElementById("titulo").value.trim();
     const descripcion = document.getElementById("descripcion").value.trim() || null;
     const prioridad = document.getElementById("prioridad").value;
+    const recurrencia = document.getElementById("recurrencia").value;
     const fecha_limite = document.getElementById("fecha_limite").value || null;
 
+    console.log("Variables capturadas:");
+    console.log("  titulo:", JSON.stringify(titulo));
+    console.log("  descripcion:", JSON.stringify(descripcion));
+    console.log("  prioridad:", JSON.stringify(prioridad));
+    console.log("  recurrencia:", JSON.stringify(recurrencia));
+    console.log("  fecha_limite:", JSON.stringify(fecha_limite));
+
     const categoria = obtenerCategoriaFormulario("categoria", "categoria_custom", "grupo-categoria-custom");
-    if (categoria === null) return; // hubo error
+    console.log("  categoria:", JSON.stringify(categoria));
+
+    if (categoria === null) {
+        console.log("❌ Categoria es null, abortando");
+        return;
+    }
 
     if (!titulo) {
+        console.log("❌ Titulo vacío, mostrando toast");
         mostrarToast("El título no puede estar vacío", "warning");
         return;
     }
+
+    const bodyAEnviar = { titulo, descripcion, prioridad, categoria, recurrencia, fecha_limite };
+    console.log("📤 Body a enviar:", JSON.stringify(bodyAEnviar));
 
     const boton = document.querySelector("#form-nueva-tarea button[type='submit']");
     boton.disabled = true;
@@ -433,12 +479,14 @@ async function crearTarea(e) {
     const [respuesta] = await Promise.all([
         apiFetch("/tareas", {
             method: "POST",
-            body: JSON.stringify({ titulo, descripcion, prioridad, categoria, fecha_limite }),
+            body: JSON.stringify(bodyAEnviar),
         }),
         new Promise(resolve => setTimeout(resolve, 500))
     ]);
 
     const { ok, data } = respuesta;
+
+    console.log("📥 Respuesta:", { ok, status: respuesta.status, data });
 
     boton.disabled = false;
     boton.textContent = "Crear Tarea";
@@ -447,8 +495,8 @@ async function crearTarea(e) {
         document.getElementById("form-nueva-tarea").reset();
         document.getElementById("grupo-categoria-custom").classList.add("hidden");
         tareas.push(data);
-        actualizarFiltroCategorias();
         renderizarTareas();
+        if (vistaActual === "calendario") renderizarCalendario();
         mostrarToast("Tarea creada exitosamente", "success");
     } else {
         mostrarToast(data.error || "Error al crear la tarea", "error");
@@ -469,11 +517,22 @@ async function toggleCompletada(id) {
 
     if (ok) {
         tarea.completada = !tarea.completada;
+
+        // ¿Se creó una nueva tarea recurrente?
+        if (data.nueva_tarea_recurrente) {
+            // La completada se fue a la papelera, quitarla del array
+            tareas = tareas.filter(t => t.id !== tarea.id);
+            tareas.push(data.nueva_tarea_recurrente);
+            mostrarToast("🔄 Tarea recurrente creada para el siguiente periodo", "success");
+            actualizarFiltroCategorias();
+        } else if (tarea.completada) {
+            mostrarToast("Tarea completada", "success");
+        } else {
+            mostrarToast("Tarea reabierta", "success");
+        }
+
         renderizarTareas();
-        mostrarToast(
-            tarea.completada ? "Tarea completada" : "Tarea reabierta",
-            "success"
-        );
+        if (vistaActual === "calendario") renderizarCalendario();
     } else {
         mostrarToast(data.error || "Error al actualizar", "error");
     }
@@ -491,14 +550,18 @@ function abrirModalEditar(id) {
     document.getElementById("edit-titulo").value = tarea.titulo;
     document.getElementById("edit-descripcion").value = tarea.descripcion || "";
     document.getElementById("edit-prioridad").value = tarea.prioridad;
+    document.getElementById("edit-recurrencia").value = tarea.recurrencia || "ninguna";
     document.getElementById("edit-fecha_limite").value = tarea.fecha_limite || "";
 
     rellenarCategoriaEnModal(tarea.categoria || "Personal");
 
+    // Cargar subtareas
+    subtareasTemporales = tarea.subtareas ? [...tarea.subtareas] : [];
+    renderizarSubtareasModal();
+
     document.getElementById("modal-editar").classList.remove("hidden");
     document.getElementById("edit-titulo").focus();
 }
-
 function cerrarModalEditar() {
     document.getElementById("modal-editar").classList.add("hidden");
     tareaEditandoId = null;
@@ -513,6 +576,7 @@ async function guardarEdicion(e) {
     const titulo = document.getElementById("edit-titulo").value.trim();
     const descripcion = document.getElementById("edit-descripcion").value.trim() || null;
     const prioridad = document.getElementById("edit-prioridad").value;
+    const recurrencia = document.getElementById("edit-recurrencia").value;
     const fecha_limite = document.getElementById("edit-fecha_limite").value || null;
 
     const categoria = obtenerCategoriaFormulario("edit-categoria", "edit-categoria_custom", "grupo-edit-categoria-custom");
@@ -530,7 +594,7 @@ async function guardarEdicion(e) {
     const [respuesta] = await Promise.all([
         apiFetch(`/tareas/${id}`, {
             method: "PATCH",
-            body: JSON.stringify({ titulo, descripcion, prioridad, categoria, fecha_limite }),
+            body: JSON.stringify({ titulo, descripcion, prioridad, categoria, recurrencia, fecha_limite,  subtareas: subtareasTemporales }),
         }),
         new Promise(resolve => setTimeout(resolve, 500))
     ]);
@@ -546,6 +610,7 @@ async function guardarEdicion(e) {
         cerrarModalEditar();
         actualizarFiltroCategorias();
         renderizarTareas();
+        if (vistaActual === "calendario") renderizarCalendario();
         mostrarToast("Tarea editada exitosamente", "success");
     } else {
         mostrarToast(data.error || "Error al guardar cambios", "error");
@@ -582,6 +647,7 @@ async function confirmarEliminar() {
         cerrarModalEliminar();
         actualizarFiltroCategorias();  // ← NUEVO
         renderizarTareas();
+        if (vistaActual === "calendario") renderizarCalendario();  // ← LÍNEA NUEVA
         mostrarToast("Tarea movida a la papelera", "success");
     } else {
         mostrarToast(data.error || "Error al eliminar", "error");
@@ -767,6 +833,25 @@ function configurarEventos() {
     document.getElementById("btn-confirmar-eliminar").addEventListener("click", confirmarEliminar);
     document.getElementById("btn-export-pdf").addEventListener("click", exportarTodasPDF);
     document.getElementById("btn-export-excel").addEventListener("click", exportarTodasExcel);
+    // Vista calendario
+    document.getElementById("btn-vista-lista").addEventListener("click", () => cambiarVista("lista"));
+    document.getElementById("btn-vista-calendario").addEventListener("click", () => cambiarVista("calendario"));
+    document.getElementById("btn-mes-anterior").addEventListener("click", mesAnterior);
+    document.getElementById("btn-mes-siguiente").addEventListener("click", mesSiguiente);
+    document.getElementById("btn-cerrar-modal-dia").addEventListener("click", cerrarModalDia);
+    // Cambiar contraseña
+    document.getElementById("btn-cambiar-password").addEventListener("click", abrirModalPassword);
+    document.getElementById("btn-cerrar-modal-password").addEventListener("click", cerrarModalPassword);
+    document.getElementById("btn-cancelar-password").addEventListener("click", cerrarModalPassword);
+    document.getElementById("form-password").addEventListener("submit", cambiarPassword);
+    // Subtareas
+    document.getElementById("btn-agregar-subtarea").addEventListener("click", agregarSubtareaDesdeModal);
+    document.getElementById("input-nueva-subtarea").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            agregarSubtareaDesdeModal();
+            }
+        });
 
     // Papelera
     document.getElementById("btn-papelera").addEventListener("click", abrirModalPapelera);
@@ -787,6 +872,8 @@ function configurarEventos() {
             if (!modalEliminar.classList.contains("hidden")) cerrarModalEliminar();
             if (!document.getElementById("modal-exportar").classList.contains("hidden")) cerrarModalExportar();
             if (!document.getElementById("modal-papelera").classList.contains("hidden")) cerrarModalPapelera();
+            if (!document.getElementById("modal-dia").classList.contains("hidden")) cerrarModalDia();
+            if (!document.getElementById("modal-password").classList.contains("hidden")) cerrarModalPassword();
         }
     });
 
@@ -1011,4 +1098,314 @@ async function vaciarPapelera() {
     } else {
         mostrarToast(data.error || "Error al vaciar la papelera", "error");
     }
+}
+
+// ====================================================
+// VISTA CALENDARIO
+// ====================================================
+let vistaActual = "lista"; // "lista" o "calendario"
+let mesActual = new Date().getMonth();
+let anioActual = new Date().getFullYear();
+
+function cambiarVista(nuevaVista) {
+    vistaActual = nuevaVista;
+
+    const btnLista = document.getElementById("btn-vista-lista");
+    const btnCal = document.getElementById("btn-vista-calendario");
+    const vistaLista = document.getElementById("lista-tareas");
+    const vistaCalendario = document.getElementById("vista-calendario");
+
+    if (nuevaVista === "calendario") {
+        btnLista.classList.remove("active");
+        btnCal.classList.add("active");
+        vistaLista.classList.add("hidden");
+        vistaCalendario.classList.remove("hidden");
+        renderizarCalendario();
+    } else {
+        btnCal.classList.remove("active");
+        btnLista.classList.add("active");
+        vistaCalendario.classList.add("hidden");
+        vistaLista.classList.remove("hidden");
+        renderizarTareas();
+    }
+}
+
+function renderizarCalendario() {
+    const grid = document.getElementById("calendario-grid");
+    const titulo = document.getElementById("calendario-titulo");
+
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+    titulo.textContent = `${meses[mesActual]} ${anioActual}`;
+
+    // Aplicar filtros activos
+    const tareasFiltradasCal = tareasFiltradas();
+
+    // Agrupar tareas por fecha límite (YYYY-MM-DD)
+    const tareasPorDia = {};
+    tareasFiltradasCal.forEach(t => {
+        if (t.fecha_limite) {
+            if (!tareasPorDia[t.fecha_limite]) {
+                tareasPorDia[t.fecha_limite] = [];
+            }
+            tareasPorDia[t.fecha_limite].push(t);
+        }
+    });
+
+    // Calcular el primer día del mes
+    const primerDia = new Date(anioActual, mesActual, 1);
+    const ultimoDia = new Date(anioActual, mesActual + 1, 0);
+    const diasEnMes = ultimoDia.getDate();
+
+    // Ajustar para que la semana empiece en lunes (0=Dom, 1=Lun, ...)
+    let diaSemanaInicio = primerDia.getDay(); // 0=Dom, 1=Lun...
+    if (diaSemanaInicio === 0) diaSemanaInicio = 7; // Convertir Dom a 7
+    const celdasVacias = diaSemanaInicio - 1;
+
+    // Construir el HTML
+    let html = "";
+
+    // Celdas vacías antes del primer día del mes
+    for (let i = 0; i < celdasVacias; i++) {
+        html += `<div class="calendario-celda calendario-celda-vacia"></div>`;
+    }
+
+    // Días del mes
+    const hoy = new Date();
+    const esMesActual = hoy.getMonth() === mesActual && hoy.getFullYear() === anioActual;
+
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+        const fechaStr = `${anioActual}-${String(mesActual + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+        const tareasDelDia = tareasPorDia[fechaStr] || [];
+        const esHoy = esMesActual && hoy.getDate() === dia;
+        const tieneTareas = tareasDelDia.length > 0;
+
+        const clases = ["calendario-celda"];
+        if (esHoy) clases.push("calendario-hoy");
+        if (tieneTareas) clases.push("calendario-con-tareas");
+
+        // Máximo 3 dots visibles
+        const dotsHtml = tareasDelDia.slice(0, 3).map(t =>
+            `<span class="calendario-dot dot-${t.prioridad}"></span>`
+        ).join("");
+
+        const masHtml = tareasDelDia.length > 3
+            ? `<span class="calendario-mas">+${tareasDelDia.length - 3}</span>`
+            : "";
+
+        html += `
+            <div class="${clases.join(' ')}" data-fecha="${fechaStr}" ${tieneTareas ? 'data-tiene="1"' : ""}>
+                <span class="calendario-dia-num">${dia}</span>
+                ${tieneTareas ? `<div class="calendario-dots">${dotsHtml}${masHtml}</div>` : ""}
+            </div>
+        `;
+    }
+
+    grid.innerHTML = html;
+
+    // Listener para clic en día con tareas
+    grid.querySelectorAll('.calendario-celda[data-tiene="1"]').forEach(celda => {
+        celda.addEventListener("click", () => {
+            abrirModalDia(celda.dataset.fecha, tareasPorDia[celda.dataset.fecha] || []);
+        });
+    });
+}
+
+function abrirModalDia(fechaStr, tareasDelDia) {
+    const modal = document.getElementById("modal-dia");
+    const titulo = document.getElementById("modal-dia-titulo");
+    const lista = document.getElementById("modal-dia-lista");
+
+    // Formatear la fecha
+    const [anio, mes, dia] = fechaStr.split("-");
+    const fecha = new Date(anio, mes - 1, dia);
+    const opciones = { weekday: "long", day: "numeric", month: "long", year: "numeric" };
+    let fechaFormateada = fecha.toLocaleDateString("es-ES", opciones);
+    fechaFormateada = fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);
+
+    titulo.textContent = `📅 ${fechaFormateada}`;
+
+    if (!tareasDelDia || tareasDelDia.length === 0) {
+        lista.innerHTML = `<div class="empty-state-container" style="padding: 20px;">
+            <div class="empty-state-icono" style="font-size: 2em;">📭</div>
+            <p class="empty-state-texto">No hay tareas para este día.</p>
+        </div>`;
+    } else {
+        lista.innerHTML = tareasDelDia.map(t => {
+            const clases = ["tarea-card"];
+            if (t.completada) clases.push("completada");
+            clases.push(`prioridad-${t.prioridad}`);
+
+            return `
+                <div class="${clases.join(' ')}" style="margin-bottom: 10px;">
+                    <div class="tarea-header">
+                        <h3>${escapeHtml(t.titulo)}</h3>
+                        <div class="tarea-badges">
+                            <span class="badge badge-categoria">${escapeHtml(t.categoria || "Personal")}</span>
+                            <span class="badge badge-${t.prioridad}">${t.prioridad}</span>
+                        </div>
+                    </div>
+                    ${t.descripcion ? `<p class="tarea-desc">${escapeHtml(t.descripcion)}</p>` : ""}
+                    <p class="tarea-desc" style="margin-top: 5px;">
+                        ${t.completada ? "✅ Completada" : "⏳ Pendiente"}
+                    </p>
+                </div>
+            `;
+        }).join("");
+    }
+
+    modal.classList.remove("hidden");
+}
+
+function cerrarModalDia() {
+    document.getElementById("modal-dia").classList.add("hidden");
+}
+
+function mesAnterior() {
+    mesActual--;
+    if (mesActual < 0) {
+        mesActual = 11;
+        anioActual--;
+    }
+    renderizarCalendario();
+}
+
+function mesSiguiente() {
+    mesActual++;
+    if (mesActual > 11) {
+        mesActual = 0;
+        anioActual++;
+    }
+    renderizarCalendario();
+}
+
+// ====================================================
+// CAMBIAR CONTRASEÑA
+// ====================================================
+function abrirModalPassword() {
+    document.getElementById("form-password").reset();
+    document.getElementById("mensaje-error-password").classList.add("hidden");
+    document.getElementById("modal-password").classList.remove("hidden");
+    document.getElementById("pass-actual").focus();
+}
+
+function cerrarModalPassword() {
+    document.getElementById("modal-password").classList.add("hidden");
+}
+
+async function cambiarPassword(e) {
+    e.preventDefault();
+
+    const errorEl = document.getElementById("mensaje-error-password");
+    errorEl.classList.add("hidden");
+
+    const actual = document.getElementById("pass-actual").value;
+    const nueva = document.getElementById("pass-nueva").value;
+    const confirmar = document.getElementById("pass-confirmar").value;
+
+    // Validaciones locales
+    if (!actual || !nueva || !confirmar) {
+        errorEl.textContent = "⚠️ Debes completar todos los campos.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+    if (nueva.length < 8) {
+        errorEl.textContent = "⚠️ La nueva contraseña debe tener al menos 8 caracteres.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+    if (nueva !== confirmar) {
+        errorEl.textContent = "⚠️ Las contraseñas nuevas no coinciden.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+    if (actual === nueva) {
+        errorEl.textContent = "⚠️ La nueva contraseña debe ser diferente a la actual.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+
+    const boton = document.getElementById("btn-guardar-password");
+    boton.disabled = true;
+    boton.innerHTML = '<span class="spinner"></span>Guardando...';
+
+    const [respuesta] = await Promise.all([
+        apiFetch("/auth/cambiar-password", {
+            method: "POST",
+            body: JSON.stringify({
+                password_actual: actual,
+                password_nueva: nueva,
+            }),
+            skipAuthRedirect: true,  // ← LÍNEA NUEVA
+        }),
+        new Promise(resolve => setTimeout(resolve, 500))
+    ]);
+
+    const { ok, data } = respuesta;
+
+    boton.disabled = false;
+    boton.textContent = "Cambiar contraseña";
+
+    if (ok) {
+        cerrarModalPassword();
+        mostrarToast("Contraseña actualizada correctamente", "success");
+    } else {
+        errorEl.textContent = "❌ " + (data.error || "Error al cambiar la contraseña.");
+        errorEl.classList.remove("hidden");
+    }
+}
+
+// ====================================================
+// SUBTAREAS EN EL MODAL
+// ====================================================
+function renderizarSubtareasModal() {
+    const contenedor = document.getElementById("lista-subtareas-modal");
+    if (!contenedor) return;
+
+    if (subtareasTemporales.length === 0) {
+        contenedor.innerHTML = '<p class="empty-subtareas">No hay subtareas. Añade una abajo.</p>';
+        return;
+    }
+
+    contenedor.innerHTML = subtareasTemporales.map((sub, idx) => `
+        <div class="subtarea-item">
+            <input type="checkbox" 
+                   id="sub-check-${idx}" 
+                   ${sub.completada ? "checked" : ""} 
+                   onchange="toggleSubtarea(${idx})">
+            <label for="sub-check-${idx}" class="subtarea-texto ${sub.completada ? 'completada' : ''}">
+                ${escapeHtml(sub.texto)}
+            </label>
+            <button type="button" class="btn-eliminar-subtarea" onclick="eliminarSubtarea(${idx})" title="Eliminar">×</button>
+        </div>
+    `).join("");
+}
+
+function toggleSubtarea(idx) {
+    if (subtareasTemporales[idx]) {
+        subtareasTemporales[idx].completada = !subtareasTemporales[idx].completada;
+        renderizarSubtareasModal();
+    }
+}
+
+function eliminarSubtarea(idx) {
+    subtareasTemporales.splice(idx, 1);
+    renderizarSubtareasModal();
+}
+
+function agregarSubtareaDesdeModal() {
+    const input = document.getElementById("input-nueva-subtarea");
+    const texto = input.value.trim();
+
+    if (!texto) return;
+
+    subtareasTemporales.push({
+        texto: texto,
+        completada: false
+    });
+
+    input.value = "";
+    input.focus();
+    renderizarSubtareasModal();
 }

@@ -36,19 +36,18 @@ if (loginForm) {
         const textoOriginal = boton.textContent;
         boton.disabled = true;
         boton.innerHTML = '<span class="spinner"></span>Iniciando sesión...';
-        
-        // Ejecutar la petición Y un mínimo de 500ms en paralelo
+
         const [respuesta] = await Promise.all([
             apiFetch("/auth/login", {
                 method: "POST",
                 body: JSON.stringify({ email, password }),
                 skipAuthRedirect: true,
             }),
-            new Promise(resolve => setTimeout(resolve, 500)) // mínimo 500ms de spinner
+            new Promise(resolve => setTimeout(resolve, 500))
         ]);
-        
+
         const { ok, data } = respuesta;
-        
+
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
@@ -56,6 +55,13 @@ if (loginForm) {
             localStorage.setItem("access_token", data.access_token);
             window.location.href = "/dashboard";
         } else {
+            // Caso especial: email no verificado
+            if (data && data.codigo === "email_no_verificado") {
+                mostrarErrorConBotonReenviar(email, data.error);
+                document.getElementById("password").value = "";
+                return;
+            }
+
             let mensaje = "❌ El email o la contraseña son incorrectos. Verifica tus datos e intenta de nuevo.";
 
             if (data && data.error) {
@@ -72,6 +78,7 @@ if (loginForm) {
         }
     });
 }
+
 
 // ====================================================
 // REGISTRO
@@ -117,7 +124,7 @@ if (registroForm) {
         const textoOriginal = boton.textContent;
         boton.disabled = true;
         boton.innerHTML = '<span class="spinner"></span>Creando cuenta...';
-        
+
         const [respuesta] = await Promise.all([
             apiFetch("/auth/registro", {
                 method: "POST",
@@ -126,9 +133,9 @@ if (registroForm) {
             }),
             new Promise(resolve => setTimeout(resolve, 500))
         ]);
-        
+
         const { ok, data } = respuesta;
-        
+
         boton.disabled = false;
         boton.textContent = textoOriginal;
 
@@ -154,14 +161,17 @@ if (registroForm) {
     });
 }
 
+
 // ====================================================
 // MODAL DE ÉXITO DE REGISTRO
 // ====================================================
 function mostrarModalExitoRegistro() {
     const modal = document.getElementById("modal-exito-registro");
     if (!modal) {
-        alert("¡Cuenta creada con éxito! Ahora inicia sesión.");
-        window.location.href = "/login";
+        alert("¡Cuenta creada! Revisa tu email para verificarla.");
+        setTimeout(() => {
+            window.location.href = "/login";
+        }, 3000);
         return;
     }
 
@@ -169,11 +179,51 @@ function mostrarModalExitoRegistro() {
 
     setTimeout(() => {
         window.location.href = "/login";
-    }, 2800);
+    }, 4000);
 }
 
+
 // ====================================================
-// LOGOUT CON MODAL
+// REENVIAR VERIFICACIÓN DE EMAIL
+// ====================================================
+function mostrarErrorConBotonReenviar(email, mensaje) {
+    const el = document.getElementById("mensaje-error");
+    if (!el) return;
+
+    el.innerHTML = `
+        <span>📧 ${mensaje}</span>
+        <button id="btn-reenviar-verificacion" class="btn-reenviar" style="margin-top: 10px;">
+            Reenviar email de verificación
+        </button>
+    `;
+    el.classList.remove("hidden");
+
+    document.getElementById("btn-reenviar-verificacion").addEventListener("click", async () => {
+        const btn = document.getElementById("btn-reenviar-verificacion");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+        const [respuesta] = await Promise.all([
+            apiFetch("/auth/reenviar-verificacion", {
+                method: "POST",
+                body: JSON.stringify({ email }),
+                skipAuthRedirect: true,
+            }),
+            new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+
+        if (respuesta.ok) {
+            el.innerHTML = `<span>✅ ${respuesta.data.mensaje || "Email reenviado. Revisa tu bandeja de entrada."}</span>`;
+        } else {
+            btn.disabled = false;
+            btn.textContent = "Reenviar email de verificación";
+        }
+    });
+}
+
+
+// ====================================================
+// LOGOUT
 // ====================================================
 const btnLogout = document.getElementById("btn-logout");
 if (btnLogout) {
@@ -219,6 +269,7 @@ if (modalLogout) {
         }
     });
 }
+
 
 // ====================================================
 // PROTECCIÓN DE DASHBOARD
