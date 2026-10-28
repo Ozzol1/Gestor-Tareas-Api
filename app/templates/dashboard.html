@@ -8,6 +8,10 @@
     <meta name="description" content="Gestor de tareas con API REST, autenticación JWT y frontend en vanilla JS.">
     <meta property="og:title" content="Gestor de Tareas - NovaTech">
     <meta property="og:description" content="Organiza tus tareas con autenticación segura. Demo en vivo.">
+    <meta property="og:image" content="https://gestor-tareas-api-7efn.onrender.com/static/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://gestor-tareas-api-7efn.onrender.com/static/og-image.png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
@@ -388,6 +392,20 @@
         </div>
     </div>
 
+        <!-- Modal de Historial -->
+        <div id="modal-historial" class="modal hidden">
+            <div class="modal-content modal-historial">
+                <div class="modal-dia-header">
+                    <h2>📜 Historial de Actividad</h2>
+                    <button type="button" id="btn-cerrar-modal-historial" class="btn-cerrar-modal" title="Cerrar">×</button>
+                </div>
+                
+                <div id="lista-historial" class="lista-historial">
+                    <div class="loading">Cargando historial...</div>
+                </div>
+            </div>
+        </div>
+        
     <!-- Contenedor de toasts -->
     <div id="toast-container" aria-live="polite"></div>
 
@@ -395,6 +413,11 @@
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tareas.js') }}"></script>
     
+    <button id="btn-historial" class="btn-papelera" title="Ver historial de actividad">
+        <span>📜</span>
+        <span class="btn-papelera-texto">Historial</span>
+    </button>
+
     <!-- Modal de papelera -->
     <div id="modal-papelera" class="modal hidden">
         <div class="modal-content modal-papelera">

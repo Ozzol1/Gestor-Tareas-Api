@@ -844,6 +844,9 @@ function configurarEventos() {
     document.getElementById("btn-cerrar-modal-password").addEventListener("click", cerrarModalPassword);
     document.getElementById("btn-cancelar-password").addEventListener("click", cerrarModalPassword);
     document.getElementById("form-password").addEventListener("submit", cambiarPassword);
+    // Historial
+    document.getElementById("btn-historial").addEventListener("click", abrirModalHistorial);
+    document.getElementById("btn-cerrar-modal-historial").addEventListener("click", cerrarModalHistorial);
     // Subtareas
     document.getElementById("btn-agregar-subtarea").addEventListener("click", agregarSubtareaDesdeModal);
     document.getElementById("input-nueva-subtarea").addEventListener("keypress", (e) => {
@@ -874,6 +877,7 @@ function configurarEventos() {
             if (!document.getElementById("modal-papelera").classList.contains("hidden")) cerrarModalPapelera();
             if (!document.getElementById("modal-dia").classList.contains("hidden")) cerrarModalDia();
             if (!document.getElementById("modal-password").classList.contains("hidden")) cerrarModalPassword();
+            if (!document.getElementById("modal-historial").classList.contains("hidden")) cerrarModalHistorial();
         }
     });
 
@@ -1408,4 +1412,61 @@ function agregarSubtareaDesdeModal() {
     input.value = "";
     input.focus();
     renderizarSubtareasModal();
+}
+
+// ====================================================
+// HISTORIAL DE ACTIVIDAD
+// ====================================================
+async function abrirModalHistorial() {
+    const modal = document.getElementById("modal-historial");
+    modal.classList.remove("hidden");
+    await cargarHistorial();
+}
+
+function cerrarModalHistorial() {
+    document.getElementById("modal-historial").classList.add("hidden");
+}
+
+async function cargarHistorial() {
+    const lista = document.getElementById("lista-historial");
+    lista.innerHTML = '<div class="loading">Cargando historial...</div>';
+
+    const { ok, data } = await apiFetch("/actividades");
+
+    if (ok) {
+        if (data.length === 0) {
+            lista.innerHTML = `
+                <div class="empty-state-container" style="padding: 30px;">
+                    <div class="empty-state-icono" style="font-size: 3em;">📜</div>
+                    <p class="empty-state-texto">Aún no hay actividad registrada.</p>
+                </div>
+            `;
+            return;
+        }
+
+        lista.innerHTML = data.map(a => {
+            const fecha = new Date(a.fecha_creacion).toLocaleString("es-ES", {
+                day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+            });
+
+            // Iconos según la acción
+            let icono = "📝";
+            if (a.accion === "crear") icono = "➕";
+            if (a.accion === "editar") icono = "✏️";
+            if (a.accion === "completar") icono = "✅";
+            if (a.accion === "eliminar") icono = "🗑️";
+
+            return `
+                <div class="historial-item">
+                    <div class="historial-icono">${icono}</div>
+                    <div class="historial-contenido">
+                        <p class="historial-texto">${escapeHtml(a.detalle)}</p>
+                        <p class="historial-fecha">${fecha}</p>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    } else {
+        lista.innerHTML = '<div class="loading">Error al cargar el historial</div>';
+    }
 }

@@ -3285,3 +3285,81 @@ html[data-theme="dark"] .input-subtarea-container input {
 html[data-theme="dark"] .badge-progreso {
     background: #475569;
 }
+
+/* ====================================================
+   MODAL DE HISTORIAL
+   ==================================================== */
+   .modal-historial {
+    max-width: 550px;
+    max-height: 85vh;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.lista-historial {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 60vh;
+    padding-right: 5px;
+    margin-top: 10px;
+}
+
+.historial-item {
+    display: flex;
+    gap: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.historial-item:last-child {
+    border-bottom: none;
+}
+
+.historial-icono {
+    width: 36px;
+    height: 36px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1em;
+    flex-shrink: 0;
+}
+
+.historial-contenido {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.historial-texto {
+    margin: 0 0 4px 0;
+    color: #2c3e50;
+    font-size: 0.95em;
+    text-align: left;
+    line-height: 1.4;
+}
+
+.historial-fecha {
+    margin: 0;
+    color: #95a5a6;
+    font-size: 0.8em;
+    text-align: left;
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] .historial-item {
+    border-bottom-color: var(--border-color);
+}
+html[data-theme="dark"] .historial-icono {
+    background: var(--bg-alt);
+}
+html[data-theme="dark"] .historial-texto {
+    color: var(--text-primary);
+}
+html[data-theme="dark"] .historial-fecha {
+    color: var(--text-muted);
+}
