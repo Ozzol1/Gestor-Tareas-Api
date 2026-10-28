@@ -7,6 +7,7 @@ from app import exports
 from datetime import datetime, timezone, timedelta
 import calendar
 from io import BytesIO
+from app.models import Tarea, Usuario, Subtarea, Actividad
 
 bp = Blueprint("tareas", __name__)
 
@@ -47,6 +48,14 @@ def _calcular_siguiente_fecha(fecha_str, recurrencia):
 
     return nueva.strftime("%Y-%m-%d")
 
+def _registrar_actividad(usuario_id, accion, detalle):
+    """Guarda una actividad en el historial del usuario."""
+    nueva = Actividad(
+        accion=accion,
+        detalle=detalle,
+        usuario_id=usuario_id
+    )
+    db.session.add(nueva)
 
 def _get_usuario_actual():
     """Devuelve el objeto Usuario del token actual."""
@@ -132,6 +141,8 @@ def crear_tarea():
             )
             db.session.add(nueva_sub)
 
+    _registrar_actividad(usuario_id, "crear", f"Creó la tarea '{nueva.titulo}'")
+    db.session.commit()
     db.session.commit()
     return jsonify(nueva.to_dict()), 201
 
@@ -209,9 +220,13 @@ def actualizar_tarea(tarea_id):
             # ✅ AUTO-ARCHIVAR: mover la completada a la papelera
             tarea.eliminada = True
             tarea.fecha_eliminacion = datetime.now(timezone.utc)
-
+    
+    if se_marca_completada:
+        _registrar_actividad(usuario_id, "completar", f"Completó la tarea '{tarea.titulo}'")
+    elif "titulo" in data or "descripcion" in data or "prioridad" in data:
+        _registrar_actividad(usuario_id, "editar", f"Editó la tarea '{tarea.titulo}'")
+    
     db.session.commit()
-
     respuesta = tarea.to_dict()
     if nueva_tarea:
         respuesta["nueva_tarea_recurrente"] = nueva_tarea.to_dict()
@@ -231,6 +246,7 @@ def eliminar_tarea(tarea_id):
 
     tarea.eliminada = True
     tarea.fecha_eliminacion = datetime.now(timezone.utc)
+    _registrar_actividad(usuario_id, "eliminar", f"Moviste a la papelera la tarea '{tarea.titulo}'")
     db.session.commit()
 
     return jsonify({"mensaje": f"Tarea {tarea_id} movida a la papelera."}), 200
@@ -436,3 +452,17 @@ def vaciar_papelera():
     db.session.commit()
 
     return jsonify({"mensaje": f"{count} tarea(s) eliminada(s) permanentemente."}), 200
+
+# ====================================================
+# GET /actividades - Obtener historial de actividad
+# ====================================================
+@bp.route("/actividades", methods=["GET"])
+@jwt_required()
+def listar_actividades():
+    usuario_id = int(get_jwt_identity())
+    
+    # Traer las últimas 50 actividades ordenadas por fecha descendente
+    actividades = Actividad.query.filter_by(usuario_id=usuario_id)\
+        .order_by(Actividad.fecha_creacion.desc()).limit(50).all()
+        
+    return jsonify([a.to_dict() for a in actividades]), 200

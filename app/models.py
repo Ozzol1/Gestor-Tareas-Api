@@ -25,6 +25,7 @@ class Usuario(db.Model):
     verificacion_token_expires = db.Column(db.DateTime, nullable=True)
 
     tareas = db.relationship("Tarea", backref="usuario", lazy=True)
+    actividades = db.relationship("Actividad", backref="usuario", lazy=True, cascade="all, delete-orphan")    
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -101,3 +102,19 @@ class Subtarea(db.Model):
             "texto": self.texto,
             "completada": self.completada,
         }
+class Actividad(db.Model):
+    __tablename__ = "actividades"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    accion = db.Column(db.String(50), nullable=False)  # "crear", "editar", "completar", "eliminar"
+    detalle = db.Column(db.String(255), nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "accion": self.accion,
+            "detalle": self.detalle,
+            "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+        }        
