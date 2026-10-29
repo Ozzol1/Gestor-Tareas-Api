@@ -126,6 +126,7 @@ def crear_tarea():
         fecha_limite=data.get("fecha_limite"),
         completada=data.get("completada", False),
         usuario_id=usuario_id,
+        estado=data.get("estado", "pendiente"),
     )
     db.session.add(nueva)
     db.session.flush()  # Para obtener el ID de la tarea antes del commit
@@ -170,7 +171,8 @@ def actualizar_tarea(tarea_id):
     estaba_pendiente = not tarea.completada
     se_marca_completada = data.get("completada") is True and estaba_pendiente
 
-    for campo in ["titulo", "descripcion", "completada", "prioridad", "categoria", "recurrencia", "fecha_limite"]:
+    # 1. Aplicar cambios a los campos normales
+    for campo in ["titulo", "descripcion", "completada", "prioridad", "categoria", "recurrencia", "fecha_limite", "estado"]:
         if campo in data:
             valor = data[campo]
             if campo == "titulo":
@@ -179,13 +181,22 @@ def actualizar_tarea(tarea_id):
                 valor = valor.strip() if valor else "Personal"
             setattr(tarea, campo, valor)
 
-    # Procesar subtareas si vienen en el payload
+    # 2. Sincronizar estado y completada
+    if "estado" in data:
+        if data["estado"] == "completado":
+            tarea.completada = True
+        else:
+            tarea.completada = False
+    elif "completada" in data:
+        if data["completada"] == True:
+            tarea.estado = "completado"
+        else:
+            tarea.estado = "pendiente"
+
+    # 3. Procesar subtareas
     if "subtareas" in data:
-        # Eliminar subtareas existentes
         for sub in tarea.subtareas:
             db.session.delete(sub)
-        
-        # Crear las nuevas
         for sub in data["subtareas"]:
             if sub.get("texto", "").strip():
                 nueva_sub = Subtarea(
@@ -195,6 +206,7 @@ def actualizar_tarea(tarea_id):
                 )
                 db.session.add(nueva_sub)
 
+    # 4. Manejar recurrencia
     nueva_tarea = None
     if se_marca_completada and tarea.recurrencia != "ninguna":
         siguiente_fecha = _calcular_siguiente_fecha(tarea.fecha_limite, tarea.recurrencia)
@@ -216,17 +228,19 @@ def actualizar_tarea(tarea_id):
                 usuario_id=usuario_id,
             )
             db.session.add(nueva_tarea)
-
-            # ✅ AUTO-ARCHIVAR: mover la completada a la papelera
+            
+            # Auto-archivar la completada
             tarea.eliminada = True
             tarea.fecha_eliminacion = datetime.now(timezone.utc)
-    
+
+    # 5. Registrar actividad en el historial
     if se_marca_completada:
         _registrar_actividad(usuario_id, "completar", f"Completó la tarea '{tarea.titulo}'")
-    elif "titulo" in data or "descripcion" in data or "prioridad" in data:
+    elif "titulo" in data or "descripcion" in data or "prioridad" in data or "categoria" in data:
         _registrar_actividad(usuario_id, "editar", f"Editó la tarea '{tarea.titulo}'")
-    
+
     db.session.commit()
+
     respuesta = tarea.to_dict()
     if nueva_tarea:
         respuesta["nueva_tarea_recurrente"] = nueva_tarea.to_dict()
