@@ -46,22 +46,16 @@ def registro():
     db.session.add(nuevo)
     db.session.commit()
 
-    # En desarrollo (APP_URL apunta a localhost) NO requiere verificación
-    app_url = os.getenv("APP_URL", "")
-    if "localhost" in app_url or "127.0.0.1" in app_url:
-        nuevo.email_verificado = True
-        nuevo.verificacion_token = None
-        nuevo.verificacion_token_expires = None
-        db.session.commit()
-        print(f"🛠️  DEV: Usuario {email} auto-verificado")
-    else:
-        # En producción (Render) SÍ envía el email
-        email_service.enviar_email_verificacion(email, token)
+    # Forzamos la verificación en True para evitar bloqueos en producción
+    nuevo.email_verificado = True
+    nuevo.verificacion_token = None
+    nuevo.verificacion_token_expires = None
+    db.session.commit()
+
     return jsonify({
-        "mensaje": "Usuario registrado. Revisa tu email para verificar tu cuenta.",
+        "mensaje": "Usuario registrado. Ya puedes iniciar sesión.",
         "usuario": nuevo.to_dict()
     }), 201
-
 
 # ====================================================
 # POST /auth/login
@@ -81,14 +75,7 @@ def login():
 
     if not usuario or not usuario.check_password(data["password"]):
         return jsonify({"error": "Credenciales inválidas."}), 401
-
-    # Verificar email
-    if not usuario.email_verificado:
-        return jsonify({
-            "error": "Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
-            "codigo": "email_no_verificado"
-        }), 403
-
+        
     access_token = create_access_token(identity=str(usuario.id))
 
     return jsonify({
