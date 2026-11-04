@@ -3773,3 +3773,35 @@ html[data-theme="dark"] .btn-subir-archivo:hover { background: var(--bg-hover); 
         justify-content: space-between !important;
     }
 }
+
+/* ====================================================
+   RESPONSIVE MÓVIL - ESTADÍSTICAS
+   ==================================================== */
+   @media (max-width: 600px) {
+    /* Poner los cuadros de estadísticas en 2 columnas */
+    .estadisticas {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important; 
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Reducir el tamaño de los cuadros */
+    .stat-card {
+        padding: 10px 8px !important;
+        gap: 6px !important;
+    }
+
+    /* Ajustar el tamaño de los iconos y textos */
+    .stat-icono {
+        font-size: 1.2em !important;
+    }
+
+    .stat-numero {
+        font-size: 1.2em !important;
+    }
+
+    .stat-label {
+        font-size: 0.65em !important;
+    }
+}
