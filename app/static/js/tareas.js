@@ -9,6 +9,7 @@ let busquedaActual = "";
 let tareaEditandoId = null;
 let tareaExportandoId = null;
 let tareaEliminandoId = null;
+let comentariosTemporales = [];
 
 // ====================================================
 // INICIALIZACIÓN
@@ -552,6 +553,14 @@ function abrirModalEditar(id) {
     document.getElementById("edit-prioridad").value = tarea.prioridad;
     document.getElementById("edit-recurrencia").value = tarea.recurrencia || "ninguna";
     document.getElementById("edit-fecha_limite").value = tarea.fecha_limite || "";
+    // Cargar comentarios
+    cargarComentariosModal(tarea.id);
+
+    document.getElementById("modal-editar").classList.remove("hidden");
+    document.getElementById("edit-titulo").focus();
+
+    // Cargar archivos
+    cargarArchivosModal(tarea.id);
 
     rellenarCategoriaEnModal(tarea.categoria || "Personal");
 
@@ -847,6 +856,22 @@ function configurarEventos() {
     // Historial
     document.getElementById("btn-historial").addEventListener("click", abrirModalHistorial);
     document.getElementById("btn-cerrar-modal-historial").addEventListener("click", cerrarModalHistorial);
+    // Vista kanban
+    document.getElementById("btn-vista-kanban").addEventListener("click", () => cambiarVista("kanban"));
+    
+    // Archivos
+    document.getElementById("input-nuevo-archivo").addEventListener("change", (e) => subirArchivo(e.target));
+    
+    // Comentarios
+    document.getElementById("btn-agregar-comentario").addEventListener("click", agregarComentario);
+    
+    // Modal genérico
+    document.getElementById("btn-cancelar-generic").addEventListener("click", cerrarConfirmacionGenerica);
+    document.getElementById("btn-confirmar-generic").addEventListener("click", () => {
+        if (accionConfirmada) accionConfirmada();
+        cerrarConfirmacionGenerica();
+    });
+    
     // Subtareas
     document.getElementById("btn-agregar-subtarea").addEventListener("click", agregarSubtareaDesdeModal);
     document.getElementById("input-nueva-subtarea").addEventListener("keypress", (e) => {
@@ -880,7 +905,47 @@ function configurarEventos() {
             if (!document.getElementById("modal-historial").classList.contains("hidden")) cerrarModalHistorial();
         }
     });
+    // Configurar columnas Kanban (solo se ejecuta UNA vez)
+    const columnasKanban = document.querySelectorAll(".kanban-cards");
+    columnasKanban.forEach(col => {
+        col.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            col.classList.add("drag-over-kanban");
+        });
+        col.addEventListener("dragleave", () => {
+            col.classList.remove("drag-over-kanban");
+        });
+        col.addEventListener("drop", async (e) => {
+            e.preventDefault();
+            col.classList.remove("drag-over-kanban");
+            
+            const tareaIdStr = e.dataTransfer.getData("text/plain");
+            const tareaId = parseInt(tareaIdStr);
+            if (isNaN(tareaId)) return;
 
+            const nuevoEstado = col.parentElement.dataset.estado;
+            
+            // Deshabilitar temporalmente
+            document.querySelectorAll(".kanban-card").forEach(c => c.setAttribute("draggable", "false"));
+
+            const { ok, data } = await apiFetch(`/tareas/${tareaId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+
+            if (ok) {
+                const index = tareas.findIndex(t => t.id === tareaId);
+                if (index !== -1) tareas[index] = data;
+                renderizarKanban();
+                mostrarToast("Tarea movida a " + nuevoEstado.replace("_", " "), "success");
+            } else {
+                mostrarToast(data.error || "Error al mover la tarea", "error");
+            }
+            
+            // Volver a habilitar
+            document.querySelectorAll(".kanban-card").forEach(c => c.setAttribute("draggable", "true"));
+        });
+    });
     configurarFiltros();
     configurarDragAndDrop();
 }
@@ -1116,21 +1181,33 @@ function cambiarVista(nuevaVista) {
 
     const btnLista = document.getElementById("btn-vista-lista");
     const btnCal = document.getElementById("btn-vista-calendario");
+    const btnKanban = document.getElementById("btn-vista-kanban");
+    
     const vistaLista = document.getElementById("lista-tareas");
     const vistaCalendario = document.getElementById("vista-calendario");
+    const vistaKanban = document.getElementById("vista-kanban");
 
+    // Resetear todos
+    btnLista.classList.remove("active");
+    btnCal.classList.remove("active");
+    btnKanban.classList.remove("active");
+    vistaLista.classList.add("hidden");
+    vistaCalendario.classList.add("hidden");
+    vistaKanban.classList.add("hidden");
+
+    // Activar el seleccionado
     if (nuevaVista === "calendario") {
-        btnLista.classList.remove("active");
         btnCal.classList.add("active");
-        vistaLista.classList.add("hidden");
         vistaCalendario.classList.remove("hidden");
         renderizarCalendario();
-    } else {
-        btnCal.classList.remove("active");
-        btnLista.classList.add("active");
-        vistaCalendario.classList.add("hidden");
-        vistaLista.classList.remove("hidden");
-        renderizarTareas();
+        } else if (nuevaVista === "kanban") {
+            btnKanban.classList.add("active");
+            vistaKanban.classList.remove("hidden");
+            renderizarKanban();
+        } else {
+            btnLista.classList.add("active");
+            vistaLista.classList.remove("hidden");
+            renderizarTareas();
     }
 }
 
@@ -1469,4 +1546,284 @@ async function cargarHistorial() {
     } else {
         lista.innerHTML = '<div class="loading">Error al cargar el historial</div>';
     }
+}
+
+// ====================================================
+// VISTA KANBAN
+// ====================================================
+function renderizarKanban() {
+    const filtradas = tareasFiltradas();
+    
+    // Limpiar columnas
+    document.getElementById("col-pendiente").innerHTML = "";
+    document.getElementById("col-en_progreso").innerHTML = "";
+    document.getElementById("col-completado").innerHTML = "";
+
+    let count = { pendiente: 0, en_progreso: 0, completado: 0 };
+
+    filtradas.forEach(t => {
+        const estado = t.estado || "pendiente";
+        const contenedor = document.getElementById(`col-${estado}`);
+        
+        if (contenedor) {
+            count[estado]++;
+            contenedor.innerHTML += `
+                <div class="kanban-card prioridad-${t.prioridad}" draggable="true" data-id="${t.id}">
+                    <div class="kanban-card-header">
+                        <h4>${escapeHtml(t.titulo)}</h4>
+                    </div>
+                    <div class="kanban-card-badges">
+                        <span class="badge badge-${t.prioridad}">${t.prioridad}</span>
+                        ${t.categoria ? `<span class="badge badge-categoria">${escapeHtml(t.categoria)}</span>` : ""}
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    // Actualizar contadores
+    document.getElementById("count-pendiente").textContent = count.pendiente;
+    document.getElementById("count-en_progreso").textContent = count.en_progreso;
+    document.getElementById("count-completado").textContent = count.completado;
+
+    configurarDragKanban();
+}
+
+function configurarDragKanban() {
+    // Solo configuramos las tarjetas aquí
+    const cards = document.querySelectorAll(".kanban-card");
+    
+    cards.forEach(card => {
+        card.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", card.dataset.id);
+            setTimeout(() => card.classList.add("arrastrando-kanban"), 0);
+        });
+        card.addEventListener("dragend", () => {
+            card.classList.remove("arrastrando-kanban");
+        });
+    });
+}
+
+// ====================================================
+// COMENTARIOS EN EL MODAL
+// ====================================================
+async function cargarComentariosModal(tareaId) {
+    const contenedor = document.getElementById("lista-comentarios-modal");
+    contenedor.innerHTML = '<div class="loading">Cargando comentarios...</div>';
+
+    const { ok, data } = await apiFetch(`/tareas/${tareaId}/comentarios`);
+    
+    if (ok) {
+        comentariosTemporales = data;
+        renderizarComentariosModal();
+    } else {
+        contenedor.innerHTML = '<p class="empty-subtareas">Error al cargar comentarios.</p>';
+    }
+}
+
+function renderizarComentariosModal() {
+    const contenedor = document.getElementById("lista-comentarios-modal");
+    
+    if (comentariosTemporales.length === 0) {
+        contenedor.innerHTML = '<p class="empty-subtareas">No hay comentarios. ¡Sé el primero en comentar!</p>';
+        return;
+    }
+
+    contenedor.innerHTML = comentariosTemporales.map(c => {
+        const fecha = new Date(c.fecha_creacion).toLocaleString("es-ES", {
+            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+        });
+
+        return `
+            <div class="comentario-item">
+                <div class="comentario-header">
+                    <span class="comentario-autor">${escapeHtml(c.autor_email.split('@')[0])}</span>
+                    <span class="comentario-fecha">${fecha}</span>
+                </div>
+                <p class="comentario-texto">${escapeHtml(c.texto)}</p>
+                <button type="button" class="btn-eliminar-comentario" onclick="eliminarComentario(${c.id})" title="Eliminar comentario">×</button>
+            </div>
+        `;
+    }).join("");
+}
+
+async function agregarComentario() {
+    const input = document.getElementById("input-nuevo-comentario");
+    const texto = input.value.trim();
+    const tareaId = document.getElementById("edit-id").value;
+
+    if (!texto || !tareaId) return;
+
+    input.disabled = true;
+    input.placeholder = "Enviando...";
+
+    const { ok, data } = await apiFetch(`/tareas/${tareaId}/comentarios`, {
+        method: "POST",
+        body: JSON.stringify({ texto })
+    });
+
+    input.disabled = false;
+    input.placeholder = "Escribe un comentario...";
+
+    if (ok) {
+        input.value = "";
+        comentariosTemporales.push(data);
+        renderizarComentariosModal();
+        mostrarToast("Comentario añadido", "success");
+    } else {
+        mostrarToast(data.error || "Error al comentar", "error");
+    }
+}
+
+async function eliminarComentario(id) {
+    abrirConfirmacionGenerica(
+        "Eliminar comentario",
+        "¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.",
+        "💬",
+        async () => {
+            const { ok, data } = await apiFetch(`/comentarios/${id}`, { method: "DELETE" });
+
+            if (ok) {
+                comentariosTemporales = comentariosTemporales.filter(c => c.id !== id);
+                renderizarComentariosModal();
+                mostrarToast("Comentario eliminado", "success");
+            } else {
+                mostrarToast(data.error || "Error al eliminar", "error");
+            }
+        }
+    );
+}
+
+// ====================================================
+// ARCHIVOS ADJUNTOS
+// ====================================================
+let archivosTemporales = [];
+
+async function cargarArchivosModal(tareaId) {
+    // Como los archivos vienen dentro del to_dict de la tarea, los leemos de ahí
+    const tarea = tareas.find(t => t.id === tareaId);
+    if (tarea && tarea.archivos) {
+        archivosTemporales = [...tarea.archivos];
+    } else {
+        archivosTemporales = [];
+    }
+    renderizarArchivosModal();
+}
+
+function renderizarArchivosModal() {
+    const contenedor = document.getElementById("lista-archivos-modal");
+    if (!contenedor) return;
+
+    if (archivosTemporales.length === 0) {
+        contenedor.innerHTML = '<p class="empty-subtareas">No hay archivos adjuntos.</p>';
+        return;
+    }
+
+    contenedor.innerHTML = archivosTemporales.map(a => {
+        const url = `/static/uploads/${a.nombre_guardado}`;
+        
+        if (a.tipo === "imagen") {
+            return `
+                <div class="archivo-item archivo-imagen">
+                    <img src="${url}" alt="${escapeHtml(a.nombre_original)}" class="archivo-preview">
+                    <button type="button" class="btn-eliminar-archivo" onclick="eliminarArchivo(${a.id})" title="Eliminar">×</button>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="archivo-item archivo-documento">
+                    <a href="${url}" target="_blank" class="archivo-enlace">
+                        📄 ${escapeHtml(a.nombre_original)}
+                    </a>
+                    <button type="button" class="btn-eliminar-archivo" onclick="eliminarArchivo(${a.id})" title="Eliminar">×</button>
+                </div>
+            `;
+        }
+    }).join("");
+}
+
+async function subirArchivo(input) {
+    const file = input.files[0];
+    const tareaId = document.getElementById("edit-id").value;
+    if (!file || !tareaId) return;
+
+    const formData = new FormData();
+    formData.append("archivo", file);
+
+    // UI Feedback
+    const label = document.querySelector('.btn-subir-archivo');
+    const textoOriginal = label.textContent;
+    label.textContent = "⏳ Subiendo...";
+    label.style.pointerEvents = "none";
+
+    const token = localStorage.getItem("access_token");
+    try {
+        const response = await fetch(`/tareas/${tareaId}/archivos`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` },
+            body: formData // Fetch pone el Content-Type multipart automáticamente
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            archivosTemporales.push(data);
+            renderizarArchivosModal();
+            mostrarToast("Archivo subido", "success");
+            // Actualizar la tarea en el array local
+            const t = tareas.find(t => t.id == tareaId);
+            if(t) t.archivos = archivosTemporales;
+        } else {
+            mostrarToast(data.error || "Error al subir", "error");
+        }
+    } catch (e) {
+        mostrarToast("Error de conexión al subir", "error");
+    } finally {
+        label.textContent = textoOriginal;
+        label.style.pointerEvents = "auto";
+        input.value = ""; // Limpiar input
+    }
+}
+
+async function eliminarArchivo(id) {
+    abrirConfirmacionGenerica(
+        "Eliminar archivo",
+        "¿Estás seguro de que quieres eliminar este archivo adjunto?",
+        "📎",
+        async () => {
+            const { ok, data } = await apiFetch(`/archivos/${id}`, { method: "DELETE" });
+
+            if (ok) {
+                archivosTemporales = archivosTemporales.filter(a => a.id !== id);
+                renderizarArchivosModal();
+                mostrarToast("Archivo eliminado", "success");
+                
+                // Actualizar la tarea en el array local
+                const tareaId = document.getElementById("edit-id").value;
+                const t = tareas.find(t => t.id == tareaId);
+                if (t) t.archivos = archivosTemporales;
+            } else {
+                mostrarToast(data.error || "Error al eliminar", "error");
+            }
+        }
+    );
+}
+
+// ====================================================
+// MODAL DE CONFIRMACIÓN GENÉRICO
+// ====================================================
+let accionConfirmada = null;
+
+function abrirConfirmacionGenerica(titulo, mensaje, icono, callback) {
+    document.getElementById("confirm-generic-titulo").textContent = titulo;
+    document.getElementById("confirm-generic-mensaje").textContent = mensaje;
+    document.getElementById("confirm-generic-icono").textContent = icono;
+    
+    accionConfirmada = callback;
+    document.getElementById("modal-confirm-generic").classList.remove("hidden");
+}
+
+function cerrarConfirmacionGenerica() {
+    document.getElementById("modal-confirm-generic").classList.add("hidden");
+    accionConfirmada = null;
 }

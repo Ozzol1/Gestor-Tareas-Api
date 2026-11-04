@@ -234,3 +234,17 @@ def test_export_excel(cliente, auth_headers):
     resp = cliente.get("/tareas/export/excel", headers=auth_headers)
     assert resp.status_code == 200
     assert "spreadsheetml" in resp.mimetype
+
+
+def test_comentarios_tarea(cliente, auth_headers):
+    resp_crear = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea con comentario"})
+    tarea_id = resp_crear.get_json()["id"]
+
+    # Crear comentario
+    resp = cliente.post(f"/tareas/{tarea_id}/comentarios", headers=auth_headers, json={"texto": "Hola mundo"})
+    assert resp.status_code == 201
+    assert resp.get_json()["texto"] == "Hola mundo"
+
+    # Listar comentarios
+    resp_list = cliente.get(f"/tareas/{tarea_id}/comentarios", headers=auth_headers)
+    assert len(resp_list.get_json()) == 1

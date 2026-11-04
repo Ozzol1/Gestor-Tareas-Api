@@ -176,6 +176,7 @@
             <button id="btn-vista-calendario" class="vista-btn" title="Vista calendario">
                 📅 Calendario
             </button>
+            <button id="btn-vista-kanban" class="vista-btn" title="Vista tablero Kanban">📊 Kanban</button>
         </div>
 
         <!-- Filtros de estado y exportación -->
@@ -219,7 +220,7 @@
                     <textarea id="edit-descripcion" rows="3"></textarea>
                 </div>
 
-                <!-- SECCIÓN NUEVA: Subtareas -->
+                <!-- SECCIÓN: Subtareas -->
                 <div class="form-group subtareas-section">
                     <label>Subtareas / Checklist:</label>
                     <div id="lista-subtareas-modal" class="lista-subtareas-modal">
@@ -231,6 +232,31 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN: Comentarios -->
+                <div class="form-group comentarios-section">
+                    <label>Comentarios:</label>
+                    <div id="lista-comentarios-modal" class="lista-comentarios-modal">
+                        <!-- Aquí se renderizan los comentarios -->
+                    </div>
+                    <div class="input-comentario-container">
+                        <textarea id="input-nuevo-comentario" placeholder="Escribe un comentario..." rows="2" maxlength="500"></textarea>
+                        <button type="button" id="btn-agregar-comentario" class="btn-agregar-comentario">Enviar</button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN NUEVA: Archivos Adjuntos -->
+                <div class="form-group archivos-section">
+                    <label>Archivos Adjuntos:</label>
+                    <div id="lista-archivos-modal" class="lista-archivos-modal">
+                        <!-- Aquí se renderizan los archivos -->
+                    </div>
+                    <div class="input-archivo-container">
+                        <input type="file" id="input-nuevo-archivo" class="input-file-oculto">
+                        <label for="input-nuevo-archivo" class="btn-subir-archivo">📎 Seleccionar archivo o imagen</label>
+                    </div>
+                </div>
+
+                <!-- Fila de Prioridad, Categoría, Repetir y Fecha -->
                 <div class="form-row form-row-4">
                     <div class="form-group">
                         <label for="edit-prioridad">Prioridad:</label>
@@ -300,6 +326,38 @@
 
             <div id="calendario-grid" class="calendario-grid"></div>
         </section>
+        
+                <!-- Vista Kanban -->
+                <section id="vista-kanban" class="vista-kanban hidden">
+                    <div class="kanban-board">
+                        <!-- Columna: Pendiente -->
+                        <div class="kanban-columna" data-estado="pendiente">
+                            <div class="kanban-header">
+                                <h3>📋 Pendientes</h3>
+                                <span class="kanban-count" id="count-pendiente">0</span>
+                            </div>
+                            <div class="kanban-cards" id="col-pendiente"></div>
+                        </div>
+        
+                        <!-- Columna: En Progreso -->
+                        <div class="kanban-columna" data-estado="en_progreso">
+                            <div class="kanban-header">
+                                <h3>⚙️ En Progreso</h3>
+                                <span class="kanban-count" id="count-en_progreso">0</span>
+                            </div>
+                            <div class="kanban-cards" id="col-en_progreso"></div>
+                        </div>
+        
+                        <!-- Columna: Completado -->
+                        <div class="kanban-columna" data-estado="completado">
+                            <div class="kanban-header">
+                                <h3>✅ Completadas</h3>
+                                <span class="kanban-count" id="count-completado">0</span>
+                            </div>
+                            <div class="kanban-cards" id="col-completado"></div>
+                        </div>
+                    </div>
+                </section>
 
     <!-- Modal de exportar tarea -->
     <div id="modal-exportar" class="modal hidden">
@@ -405,7 +463,18 @@
                 </div>
             </div>
         </div>
-        
+            <!-- Modal de Confirmación Genérico -->
+    <div id="modal-confirm-generic" class="modal hidden">
+        <div class="modal-content modal-confirm">
+            <div class="confirm-icon" id="confirm-generic-icono">⚠️</div>
+            <h2 class="confirm-titulo" id="confirm-generic-titulo">¿Estás seguro?</h2>
+            <p class="confirm-texto" id="confirm-generic-mensaje">Esta acción no se puede deshacer.</p>
+            <div class="modal-actions confirm-actions">
+                <button type="button" id="btn-cancelar-generic" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-confirmar-generic" class="btn-danger">Sí, continuar</button>
+            </div>
+        </div>
+    </div>
     <!-- Contenedor de toasts -->
     <div id="toast-container" aria-live="polite"></div>
 

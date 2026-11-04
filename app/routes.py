@@ -7,10 +7,16 @@ from app import exports
 from datetime import datetime, timezone, timedelta
 import calendar
 from io import BytesIO
-from app.models import Tarea, Usuario, Subtarea, Actividad
+from app.models import Tarea, Usuario, Subtarea, Actividad, Comentario
+import os
+import uuid
+from werkzeug.utils import secure_filename
+from flask import current_app
+from app.models import Tarea, Usuario, Subtarea, Actividad, Comentario, Archivo
 
 bp = Blueprint("tareas", __name__)
-
+UPLOAD_FOLDER = os.path.join("app", "static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Crea la carpeta si no existe
 
 def _calcular_siguiente_fecha(fecha_str, recurrencia):
     """
@@ -480,3 +486,120 @@ def listar_actividades():
         .order_by(Actividad.fecha_creacion.desc()).limit(50).all()
         
     return jsonify([a.to_dict() for a in actividades]), 200
+
+# ====================================================
+# COMENTARIOS
+# ====================================================
+@bp.route("/tareas/<int:tarea_id>/comentarios", methods=["GET"])
+@jwt_required()
+def listar_comentarios(tarea_id):
+    usuario_id = int(get_jwt_identity())
+    tarea = Tarea.query.filter_by(id=tarea_id, usuario_id=usuario_id).first()
+    if not tarea:
+        return jsonify({"error": "Tarea no encontrada."}), 404
+    
+    return jsonify([c.to_dict() for c in tarea.comentarios]), 200
+
+
+@bp.route("/tareas/<int:tarea_id>/comentarios", methods=["POST"])
+@jwt_required()
+def crear_comentario(tarea_id):
+    usuario_id = int(get_jwt_identity())
+    tarea = Tarea.query.filter_by(id=tarea_id, usuario_id=usuario_id).first()
+    if not tarea:
+        return jsonify({"error": "Tarea no encontrada."}), 404
+
+    data = request.get_json()
+    texto = data.get("texto", "").strip()
+    if not texto:
+        return jsonify({"error": "El comentario no puede estar vacío."}), 400
+
+    nuevo = Comentario(
+        texto=texto,
+        tarea_id=tarea.id,
+        usuario_id=usuario_id
+    )
+    db.session.add(nuevo)
+    _registrar_actividad(usuario_id, "comentar", f"Comentó en la tarea '{tarea.titulo}'")
+    db.session.commit()
+
+    return jsonify(nuevo.to_dict()), 201
+
+
+@bp.route("/comentarios/<int:comentario_id>", methods=["DELETE"])
+@jwt_required()
+def eliminar_comentario(comentario_id):
+    usuario_id = int(get_jwt_identity())
+    comentario = Comentario.query.filter_by(id=comentario_id, usuario_id=usuario_id).first()
+    
+    if not comentario:
+        return jsonify({"error": "Comentario no encontrado o no tienes permiso."}), 404
+
+    db.session.delete(comentario)
+    db.session.commit()
+
+    return jsonify({"mensaje": "Comentario eliminado."}), 200
+
+# ====================================================
+# ARCHIVOS ADJUNTOS
+# ====================================================
+@bp.route("/tareas/<int:tarea_id>/archivos", methods=["POST"])
+@jwt_required()
+def subir_archivo(tarea_id):
+    usuario_id = int(get_jwt_identity())
+    tarea = Tarea.query.filter_by(id=tarea_id, usuario_id=usuario_id).first()
+    if not tarea:
+        return jsonify({"error": "Tarea no encontrada."}), 404
+
+    if "archivo" not in request.files:
+        return jsonify({"error": "No se envió ningún archivo."}), 400
+
+    file = request.files["archivo"]
+    if file.filename == "":
+        return jsonify({"error": "Nombre de archivo vacío."}), 400
+
+    # Generar nombre único para evitar colisiones
+    extension = os.path.splitext(file.filename)[1]
+    nombre_guardado = f"{uuid.uuid4().hex}{extension}"
+    
+    # Determinar si es imagen
+    tipo = "imagen" if file.content_type.startswith("image/") else "archivo"
+
+    # Guardar archivo
+    ruta_completa = os.path.join(UPLOAD_FOLDER, nombre_guardado)
+    file.save(ruta_completa)
+
+    nuevo_archivo = Archivo(
+        nombre_original=file.filename,
+        nombre_guardado=nombre_guardado,
+        tipo=tipo,
+        tarea_id=tarea.id
+    )
+    db.session.add(nuevo_archivo)
+    _registrar_actividad(usuario_id, "adjuntar", f"Adjuntó un archivo a la tarea '{tarea.titulo}'")
+    db.session.commit()
+
+    return jsonify(nuevo_archivo.to_dict()), 201
+
+
+@bp.route("/archivos/<int:archivo_id>", methods=["DELETE"])
+@jwt_required()
+def eliminar_archivo(archivo_id):
+    usuario_id = int(get_jwt_identity())
+    archivo = Archivo.query.join(Tarea).filter(
+        Archivo.id == archivo_id, 
+        Tarea.usuario_id == usuario_id
+    ).first()
+
+    if not archivo:
+        return jsonify({"error": "Archivo no encontrado."}), 404
+
+    # Eliminar archivo físico
+    ruta_completa = os.path.join(UPLOAD_FOLDER, archivo.nombre_guardado)
+    if os.path.exists(ruta_completa):
+        os.remove(ruta_completa)
+
+    db.session.delete(archivo)
+    db.session.commit()
+
+    return jsonify({"mensaje": "Archivo eliminado."}), 200

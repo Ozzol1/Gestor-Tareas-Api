@@ -99,5 +99,9 @@ def create_app(config_override=None):
     @app.route("/reset-password/<token>")
     def reset_password_page(token):
         return render_template("reset_password.html", token=token)
+    
+    @app.route("/verificar-email/<token>")
+    def verificar_email_page(token):
+        return render_template("verificar_email.html", token=token)
 
     return app

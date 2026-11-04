@@ -55,6 +55,10 @@ def validar_payload_tarea(data, parcial=False):
     if "recurrencia" in data:
         if data["recurrencia"] not in RECURRENCIAS_VALIDAS:
             return False, f"Recurrencia inválida. Debe ser una de: {', '.join(RECURRENCIAS_VALIDAS)}."
+    
+    if "estado" in data:
+        if data["estado"] not in ["pendiente", "en_progreso", "completado"]:
+            return False, "Estado inválido. Debe ser: pendiente, en_progreso o completado."
         
     return True, None
 
