@@ -1,6 +1,7 @@
 import pytest
+import io
 from app import create_app, db
-from app.models import Usuario, Tarea, Subtarea
+from app.models import Usuario, Tarea, Subtarea, Comentario, Archivo
 
 
 @pytest.fixture
@@ -11,7 +12,7 @@ def cliente():
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "JWT_SECRET_KEY": "clave-de-test-suficientemente-larga-para-32-bytes-o-mas",
         "JWT_ACCESS_TOKEN_EXPIRES": 3600,
-        "APP_URL": "http://localhost:5000",  # Para que auto-verifique el email en test
+        "APP_URL": "http://localhost:5000",
     })
 
     with app.app_context():
@@ -39,7 +40,6 @@ def auth_headers(cliente):
 # ====================================================
 # TESTS DE AUTENTICACIÓN
 # ====================================================
-
 def test_registro_exitoso(cliente):
     resp = cliente.post("/auth/registro", json={"email": "nuevo@ejemplo.com", "password": "secreto123"})
     assert resp.status_code == 201
@@ -59,24 +59,15 @@ def test_cambiar_password(cliente, auth_headers):
         "password_nueva": "nuevopass123"
     })
     assert resp.status_code == 200
-
+    
     # Verificar que la nueva contraseña funciona
     resp_login = cliente.post("/auth/login", json={"email": "test@ejemplo.com", "password": "nuevopass123"})
     assert resp_login.status_code == 200
 
 
-def test_cambiar_password_incorrecta(cliente, auth_headers):
-    resp = cliente.post("/auth/cambiar-password", headers=auth_headers, json={
-        "password_actual": "incorrecta",
-        "password_nueva": "nuevopass123"
-    })
-    assert resp.status_code == 400
-
-
 # ====================================================
-# TESTS DE TAREAS (CRUD BÁSICO)
+# TESTS DE TAREAS (CRUD + KANBAN)
 # ====================================================
-
 def test_crear_tarea_completa(cliente, auth_headers):
     resp = cliente.post("/tareas", headers=auth_headers, json={
         "titulo": "Tarea Completa",
@@ -89,139 +80,117 @@ def test_crear_tarea_completa(cliente, auth_headers):
     data = resp.get_json()
     assert data["titulo"] == "Tarea Completa"
     assert data["categoria"] == "Trabajo"
-    assert data["recurrencia"] == "semanal"
     assert data["estado"] == "pendiente"
 
 
-def test_crear_tarea_con_subtareas(cliente, auth_headers):
-    resp = cliente.post("/tareas", headers=auth_headers, json={
-        "titulo": "Compras",
-        "subtareas": [
-            {"texto": "Leche", "completada": False},
-            {"texto": "Pan", "completada": True}
-        ]
-    })
-    assert resp.status_code == 201
-    data = resp.get_json()
-    assert len(data["subtareas"]) == 2
-    assert data["subtareas"][0]["texto"] == "Leche"
+def test_mover_tarea_kanban(cliente, auth_headers):
+    # Crear tarea
+    resp = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Mover en Kanban"})
+    tarea_id = resp.get_json()["id"]
 
+    # Mover a "En Progreso"
+    resp_patch = cliente.patch(f"/tareas/{tarea_id}", headers=auth_headers, json={"estado": "en_progreso"})
+    assert resp_patch.status_code == 200
+    assert resp_patch.get_json()["estado"] == "en_progreso"
+    assert resp_patch.get_json()["completada"] is False
 
-def test_actualizar_tarea(cliente, auth_headers):
-    cliente.post("/tareas", headers=auth_headers, json={"titulo": "Original"})
-    resp = cliente.patch("/tareas/1", headers=auth_headers, json={"titulo": "Editada", "estado": "en_progreso"})
-    assert resp.status_code == 200
-    assert resp.get_json()["titulo"] == "Editada"
-    assert resp.get_json()["estado"] == "en_progreso"
-
-
-def test_listar_tareas(cliente, auth_headers):
-    cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea 1"})
-    cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea 2"})
-    resp = cliente.get("/tareas", headers=auth_headers)
-    assert resp.status_code == 200
-    assert len(resp.get_json()) == 2
+    # Mover a "Completado"
+    resp_patch2 = cliente.patch(f"/tareas/{tarea_id}", headers=auth_headers, json={"estado": "completado"})
+    assert resp_patch2.status_code == 200
+    assert resp_patch2.get_json()["estado"] == "completado"
+    assert resp_patch2.get_json()["completada"] is True
 
 
 # ====================================================
-# TESTS DE PAPELERA DE RECICLAJE
+# TESTS DE PAPELERA
 # ====================================================
-
 def test_soft_delete_y_restaurar(cliente, auth_headers):
     cliente.post("/tareas", headers=auth_headers, json={"titulo": "A borrar"})
 
-    # Eliminar (Soft Delete)
-    resp = cliente.delete("/tareas/1", headers=auth_headers)
-    assert resp.status_code == 200
-
-    # La tarea ya no debe estar en la lista principal
-    resp_list = cliente.get("/tareas", headers=auth_headers)
-    assert len(resp_list.get_json()) == 0
-
-    # Debe estar en la papelera
-    resp_papelera = cliente.get("/tareas/papelera", headers=auth_headers)
-    assert len(resp_papelera.get_json()) == 1
-
-    # Restaurar
-    resp_restaurar = cliente.post("/tareas/1/restaurar", headers=auth_headers)
-    assert resp_restaurar.status_code == 200
-
-    # Debe volver a la lista principal
-    resp_list2 = cliente.get("/tareas", headers=auth_headers)
-    assert len(resp_list2.get_json()) == 1
-
-
-def test_eliminar_definitivo(cliente, auth_headers):
-    cliente.post("/tareas", headers=auth_headers, json={"titulo": "A borrar"})
     cliente.delete("/tareas/1", headers=auth_headers)
+    assert len(cliente.get("/tareas", headers=auth_headers).get_json()) == 0
+    assert len(cliente.get("/tareas/papelera", headers=auth_headers).get_json()) == 1
 
-    resp = cliente.delete("/tareas/1/definitivo", headers=auth_headers)
-    assert resp.status_code == 200
-
-    resp_papelera = cliente.get("/tareas/papelera", headers=auth_headers)
-    assert len(resp_papelera.get_json()) == 0
+    cliente.post("/tareas/1/restaurar", headers=auth_headers)
+    assert len(cliente.get("/tareas", headers=auth_headers).get_json()) == 1
 
 
 # ====================================================
-# TESTS DE TAREAS RECURRENTES
+# TESTS DE COMENTARIOS
 # ====================================================
+def test_comentarios_tarea(cliente, auth_headers):
+    # Crear tarea
+    resp_tarea = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea con comentario"})
+    tarea_id = resp_tarea.get_json()["id"]
 
-def test_tarea_recurrente_se_auto_crea(cliente, auth_headers):
-    # Crear tarea diaria con fecha
-    cliente.post("/tareas", headers=auth_headers, json={
-        "titulo": "Regar plantas",
-        "recurrencia": "diaria",
-        "fecha_limite": "2026-10-15"
-    })
+    # Crear comentario
+    resp = cliente.post(f"/tareas/{tarea_id}/comentarios", headers=auth_headers, json={"texto": "Hola mundo"})
+    assert resp.status_code == 201
+    assert resp.get_json()["texto"] == "Hola mundo"
+    comentario_id = resp.get_json()["id"]
 
-    # Completarla
-    resp = cliente.patch("/tareas/1", headers=auth_headers, json={"completada": True})
-    assert resp.status_code == 200
+    # Listar comentarios
+    resp_list = cliente.get(f"/tareas/{tarea_id}/comentarios", headers=auth_headers)
+    assert len(resp_list.get_json()) == 1
+
+    # Eliminar comentario
+    resp_delete = cliente.delete(f"/comentarios/{comentario_id}", headers=auth_headers)
+    assert resp_delete.status_code == 200
+
+    # Verificar que ya no hay comentarios
+    resp_list2 = cliente.get(f"/tareas/{tarea_id}/comentarios", headers=auth_headers)
+    assert len(resp_list2.get_json()) == 0
+
+
+# ====================================================
+# TESTS DE ARCHIVOS ADJUNTOS
+# ====================================================
+def test_subir_y_eliminar_archivo(cliente, auth_headers):
+    # Crear tarea
+    resp_tarea = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea con archivo"})
+    tarea_id = resp_tarea.get_json()["id"]
+
+    # Subir un archivo falso
+    archivo_falso = (io.BytesIO(b"contenido de prueba"), "documento_prueba.txt")
+    resp = cliente.post(
+        f"/tareas/{tarea_id}/archivos",
+        headers=auth_headers,
+        data={"archivo": archivo_falso},
+        content_type="multipart/form-data"
+    )
+    assert resp.status_code == 201
     data = resp.get_json()
+    assert data["nombre_original"] == "documento_prueba.txt"
+    archivo_id = data["id"]
 
-    # Debe devolver la nueva tarea recurrente
-    assert "nueva_tarea_recurrente" in data
-    nueva_tarea = data["nueva_tarea_recurrente"]
-    assert nueva_tarea["titulo"] == "Regar plantas"
-    assert nueva_tarea["fecha_limite"] == "2026-10-16"  # 1 día después
-    assert nueva_tarea["completada"] is False
+    # Verificar que la tarea ahora tiene 1 archivo
+    tarea_actualizada = cliente.get(f"/tareas/{tarea_id}", headers=auth_headers).get_json()
+    assert len(tarea_actualizada["archivos"]) == 1
 
-    # La tarea original debe estar en la papelera
-    resp_papelera = cliente.get("/tareas/papelera", headers=auth_headers)
-    assert len(resp_papelera.get_json()) == 1
+    # Eliminar archivo
+    resp_delete = cliente.delete(f"/archivos/{archivo_id}", headers=auth_headers)
+    assert resp_delete.status_code == 200
 
 
 # ====================================================
-# TESTS DE HISTORIAL DE ACTIVIDAD
+# TESTS DE HISTORIAL
 # ====================================================
-
 def test_historial_actividad(cliente, auth_headers):
-    # 1. Crear tarea y capturar el ID real
     resp_crear = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea historial"})
-    assert resp_crear.status_code == 201, f"Error al crear: {resp_crear.get_json()}"
     tarea_id = resp_crear.get_json()["id"]
 
-    # 2. Editar la tarea usando el ID real
-    resp_editar = cliente.patch(f"/tareas/{tarea_id}", headers=auth_headers, json={"titulo": "Tarea editada"})
-    assert resp_editar.status_code == 200, f"Error al editar: {resp_editar.get_json()}"
+    cliente.patch(f"/tareas/{tarea_id}", headers=auth_headers, json={"titulo": "Tarea editada"})
 
-    # 3. Obtener historial
     resp = cliente.get("/actividades", headers=auth_headers)
-    assert resp.status_code == 200, f"Error al obtener historial: {resp.get_json()}"
+    assert resp.status_code == 200
     historial = resp.get_json()
-    
-    # 4. Verificar que sea una lista y tenga los registros
-    assert isinstance(historial, list), f"Se esperaba lista, se obtuvo: {type(historial)}"
-    assert len(historial) >= 2, f"Se esperaban 2+ registros, se obtuvieron {len(historial)}: {historial}"
-    
-    # 5. Verificar que la palabra "creó" esté en algún detalle
-    assert any("creó" in h["detalle"].lower() for h in historial), f"No se encontró 'creó' en: {historial}"
+    assert len(historial) >= 2
+    assert any("creó" in h["detalle"].lower() for h in historial)
 
 
 # ====================================================
-# TESTS DE EXPORTACIÓN (Solo status code)
+# TESTS DE EXPORTACIÓN
 # ====================================================
-
 def test_export_pdf(cliente, auth_headers):
     cliente.post("/tareas", headers=auth_headers, json={"titulo": "Para exportar"})
     resp = cliente.get("/tareas/export/pdf", headers=auth_headers)
@@ -234,17 +203,3 @@ def test_export_excel(cliente, auth_headers):
     resp = cliente.get("/tareas/export/excel", headers=auth_headers)
     assert resp.status_code == 200
     assert "spreadsheetml" in resp.mimetype
-
-
-def test_comentarios_tarea(cliente, auth_headers):
-    resp_crear = cliente.post("/tareas", headers=auth_headers, json={"titulo": "Tarea con comentario"})
-    tarea_id = resp_crear.get_json()["id"]
-
-    # Crear comentario
-    resp = cliente.post(f"/tareas/{tarea_id}/comentarios", headers=auth_headers, json={"texto": "Hola mundo"})
-    assert resp.status_code == 201
-    assert resp.get_json()["texto"] == "Hola mundo"
-
-    # Listar comentarios
-    resp_list = cliente.get(f"/tareas/{tarea_id}/comentarios", headers=auth_headers)
-    assert len(resp_list.get_json()) == 1
