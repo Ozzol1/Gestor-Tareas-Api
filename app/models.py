@@ -55,6 +55,7 @@ class Tarea(db.Model):
     prioridad = db.Column(db.String(10), default="media", nullable=False)
     categoria = db.Column(db.String(50), nullable=False, default="Personal")
     recurrencia = db.Column(db.String(20), default="ninguna", nullable=False)
+    estado = db.Column(db.String(20), default="pendiente", nullable=False)
     orden = db.Column(db.Integer, default=0, nullable=False)
     eliminada = db.Column(db.Boolean, default=False, nullable=False, index=True)
     fecha_eliminacion = db.Column(db.DateTime, nullable=True)
@@ -70,6 +71,7 @@ class Tarea(db.Model):
     def to_dict(self):
         return {
             "recurrencia": self.recurrencia,
+            "estado": self.estado,
             "id": self.id,
             "titulo": self.titulo,
             "descripcion": self.descripcion,
@@ -83,6 +85,7 @@ class Tarea(db.Model):
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
             "usuario_id": self.usuario_id,
             "subtareas": [s.to_dict() for s in self.subtareas],  # ← NUEVO
+            "archivos": [a.to_dict() for a in self.archivos], # <-- Si ya lo tenías, déjalo
         }
 
     def __repr__(self):
@@ -117,4 +120,45 @@ class Actividad(db.Model):
             "accion": self.accion,
             "detalle": self.detalle,
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
-        }        
+        }
+
+class Comentario(db.Model):
+    __tablename__ = "comentarios"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    texto = db.Column(db.Text, nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    tarea_id = db.Column(db.Integer, db.ForeignKey("tareas.id"), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
+
+    usuario = db.relationship("Usuario", backref="comentarios")
+    tarea = db.relationship("Tarea", backref=db.backref("comentarios", cascade="all, delete-orphan", order_by="Comentario.fecha_creacion"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "texto": self.texto,
+            "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            "autor_email": self.usuario.email if self.usuario else "Desconocido",
+            "usuario_id": self.usuario_id
+        } 
+
+class Archivo(db.Model):
+    __tablename__ = "archivos"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre_original = db.Column(db.String(255), nullable=False)
+    nombre_guardado = db.Column(db.String(255), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False) # 'imagen' o 'archivo'
+    tarea_id = db.Column(db.Integer, db.ForeignKey("tareas.id"), nullable=False)
+
+    tarea = db.relationship("Tarea", backref=db.backref("archivos", cascade="all, delete-orphan", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "nombre_original": self.nombre_original,
+            "nombre_guardado": self.nombre_guardado,
+            "tipo": self.tipo
+        }
