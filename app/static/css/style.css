@@ -3710,3 +3710,66 @@ html[data-theme="dark"] .archivo-documento { background: var(--bg-alt); }
 html[data-theme="dark"] .archivo-enlace { color: var(--text-primary); }
 html[data-theme="dark"] .btn-subir-archivo { background: var(--bg-alt); color: var(--text-primary); }
 html[data-theme="dark"] .btn-subir-archivo:hover { background: var(--bg-hover); }
+
+/* ====================================================
+   RESPONSIVE MÓVIL (Celulares)
+   ==================================================== */
+@media (max-width: 600px) {
+    /* 1. Arreglar el Header (Botones apretados) */
+    .header-actions {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    /* Ocultar el texto de los botones para que solo salgan los iconos */
+    .header-actions .btn-papelera-texto,
+    .header-actions .btn-logout span:not(.icono-logout) {
+        display: none !important;
+    }
+
+    /* Hacer los botones redondos y compactos */
+    .header-actions .btn-papelera,
+    .header-actions .btn-logout {
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+    }
+
+    /* 2. Arreglar el Calendario (Se salía de la pantalla) */
+    .calendario-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+        gap: 2px !important;
+    }
+
+    .calendario-celda {
+        min-height: 40px !important;
+        padding: 4px !important;
+    }
+
+    .calendario-dia-num {
+        font-size: 0.75em !important;
+    }
+
+    /* 3. Ajustar formularios y botones grandes */
+    .vista-toggle {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .vista-btn {
+        flex: 1;
+        font-size: 0.8em !important;
+    }
+
+    .form-row-4 {
+        grid-template-columns: 1fr !important; /* Formularios en 1 sola columna */
+    }
+
+    .exportar-grupo {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+}
