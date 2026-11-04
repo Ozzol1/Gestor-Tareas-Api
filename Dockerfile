@@ -1,26 +1,26 @@
+# Usamos una imagen base oficial de Python
 FROM python:3.11-slim
 
-# Evitar que Python escriba archivos .pyc y forzar logs en consola
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
+# Establecemos el directorio de trabajo
 WORKDIR /app
 
-# Instalamos las librerías del sistema que necesita psycopg2 y creamos un usuario seguro
-RUN apt-get update && apt-get install -y libpq5 gcc libpq-dev && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --shell /bin/bash appuser
+# ⬇️ ESTO ES CLAVE: Instalamos las dependencias del sistema para psycopg2
+RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-# Instalamos las dependencias de Python
+# Copiamos e instalamos las dependencias de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos el proyecto
+# Copiamos el resto del código
 COPY . .
 
-# Damos permisos al script de arranque y cambiamos al usuario seguro
+# Damos permisos al script de arranque y cambiamos a un usuario no-root por seguridad
 RUN chmod +x entrypoint.sh
+RUN useradd --create-home appuser
 USER appuser
 
+# Exponemos el puerto (aunque Render usa el de la variable PORT)
 EXPOSE 5000
 
+# Comando de arranque
 CMD ["./entrypoint.sh"]
