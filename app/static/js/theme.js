@@ -41,3 +41,14 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", toggleTheme);
     });
 });
+
+// ====================================================
+// REGISTRO DE PWA (Service Worker)
+// ====================================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+            .then(reg => console.log('✅ Service Worker registrado:', reg.scope))
+            .catch(err => console.log('❌ Error al registrar SW:', err));
+    });
+}
